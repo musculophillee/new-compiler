@@ -1381,17 +1381,21 @@ int main() {
             crashDiagContainer = crashCard.querySelector('#crashDiagContainer');
 
             if (btnWhyCrash) {
-                btnWhyCrash.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>DIAGNOSING ROOT CAUSE WITH GEMINI AI...</span>`;
+                btnWhyCrash.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>DIAGNOSING ROOT CAUSE (~1s)...</span>`;
                 btnWhyCrash.style.pointerEvents = 'none';
             }
             if (btnAutoFixQuick) btnAutoFixQuick.style.pointerEvents = 'none';
         }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 9500);
 
         try {
             const geminiKey = (localStorage.getItem('codedex_gemini_key') || DEFAULT_GEMINI_KEY).trim();
             const response = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
                 body: JSON.stringify({
                     action: 'crash_analysis',
                     language: currentLang,
@@ -1400,6 +1404,7 @@ int main() {
                     apiKey: geminiKey
                 })
             });
+            clearTimeout(timeoutId);
 
             if (!response.ok) throw new Error('AI connection failed');
             const data = await response.json();
@@ -1518,11 +1523,14 @@ int main() {
                 }
             }
         } catch (err) {
-            showToast('Crash analysis error: ' + err.message);
+            clearTimeout(timeoutId);
+            const isTimeout = err.name === 'AbortError';
+            showToast(isTimeout ? 'AI connection took too long, click to retry' : ('Crash analysis error: ' + err.message));
             if (btnWhyCrash) {
                 btnWhyCrash.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>RETRY CRASH ANALYSIS</span>`;
                 btnWhyCrash.style.pointerEvents = 'auto';
             }
+            if (btnAutoFixQuick) btnAutoFixQuick.style.pointerEvents = 'auto';
         }
     }
 

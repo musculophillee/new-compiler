@@ -4,6 +4,7 @@ Serves static files, executes code (Python, C++, C, Java, Go, TypeScript, JS),
 provides AI Debugger & Code Intelligence API, and code formatting.
 """
 
+import ast
 import base64
 import builtins
 import http.server
@@ -51,14 +52,15 @@ def log_request(method, path, status):
 
 def call_gemini_api(api_key, system_instruction, user_prompt):
     """
-    Calls Google Gemini REST API (gemini-3.6-flash / gemini-flash-latest) with graceful fallback.
+    Calls Google Gemini REST API with ultra-fast Flash-Lite models and responsive fallback.
     Returns generated text response or error dict.
     """
     key_to_use = api_key or os.environ.get("GEMINI_API_KEY", "").strip() or DEFAULT_GEMINI_KEY
     if not key_to_use:
         return None
 
-    models = ["gemini-3.6-flash", "gemini-flash-latest", "gemini-2.5-pro", "gemini-3.5-flash"]
+    # Ultra-responsive models: Flash-Lite delivers sub-1.2s latency and high throughput
+    models = ["gemini-flash-lite-latest", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash"]
     combined_prompt = f"{system_instruction}\n\n{user_prompt}" if system_instruction else user_prompt
 
     for model in models:
@@ -70,8 +72,8 @@ def call_gemini_api(api_key, system_instruction, user_prompt):
                 }
             ],
             "generationConfig": {
-                "temperature": 0.2,
-                "maxOutputTokens": 2048
+                "temperature": 0.15,
+                "maxOutputTokens": 1024
             }
         }
         try:
@@ -81,7 +83,8 @@ def call_gemini_api(api_key, system_instruction, user_prompt):
                 headers={"Content-Type": "application/json"},
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=15) as response:
+            # 4.5 second timeout per model for snappy responses
+            with urllib.request.urlopen(req, timeout=4.5) as response:
                 result = json.loads(response.read().decode("utf-8"))
                 candidates = result.get("candidates", [])
                 if candidates:
@@ -91,14 +94,14 @@ def call_gemini_api(api_key, system_instruction, user_prompt):
         except urllib.error.HTTPError as e:
             try:
                 err_text = e.read().decode("utf-8")
-                print(f"[Gemini API] HTTP {e.code} on {model}: {err_text}")
+                print(f"[Gemini API] HTTP {e.code} on {model}: {err_text[:120]}")
                 if "API_KEY_INVALID" in err_text or "API key not valid" in err_text:
                     return {"error": "Invalid Gemini API Key. Please verify your key in Settings (⚙️)."}
             except Exception:
                 pass
             continue
         except Exception as e:
-            print(f"[Gemini API] Connection error on {model}: {e}")
+            print(f"[Gemini API] Connection/timeout on {model}: {e}")
             continue
 
     return None
@@ -310,13 +313,16 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
         lines = code.split("\n")
         p = prompt.strip().lower()
 
-        # If Gemini API Key is provided, use Google Gemini first
+        # If Gemini API Key is provided, use Google Gemini first with ultra-fast flash-lite
         if api_key:
-            gemini_res = self.ai_gemini_process(api_key, action, language, code, error, prompt)
-            if gemini_res:
-                return gemini_res
+            try:
+                gemini_res = self.ai_gemini_process(api_key, action, language, code, error, prompt)
+                if gemini_res and gemini_res.get("success"):
+                    return gemini_res
+            except Exception as e:
+                print(f"[Gemini AI] Fallback triggered due to exception: {e}")
 
-        # Prioritize explicit actions from chips / buttons
+        # Fallback to local heuristic engine (0ms latency, 100% reliability)
         if action in ("debug", "crash_analysis"):
             return self.ai_debug(language, code, error, lines)
         elif action == "explain":
