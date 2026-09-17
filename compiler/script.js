@@ -899,6 +899,21 @@ int main() {
             editor.trigger('keyboard', 'editor.action.triggerSuggest', {});
         });
 
+        const urlParams = new URLSearchParams(window.location.search);
+        const requestedLang = urlParams.get('lang');
+        if (requestedLang && LANGUAGES[requestedLang]) {
+            currentLang = requestedLang;
+            const activeTab = tabs.find(t => t.id === activeTabId);
+            if (activeTab) {
+                activeTab.lang = requestedLang;
+                activeTab.name = `main${LANGUAGES[requestedLang].ext}`;
+                const initialCode = getSavedCode(requestedLang) || LANGUAGES[requestedLang].template;
+                activeTab.model.dispose();
+                activeTab.model = monaco.editor.createModel(initialCode, LANGUAGES[requestedLang].monacoLang);
+                editor.setModel(activeTab.model);
+            }
+        }
+
         applyTheme(currentTheme);
         renderTabs();
         updateLanguageDisplay(currentLang);

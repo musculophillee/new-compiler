@@ -132,8 +132,13 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(404, "Not Found")
 
     def do_GET(self):
-        if self.path == "/api/health":
+        clean_path = self.path.split('?')[0].rstrip('/')
+        if self.path.startswith("/api/health"):
             self.handle_health()
+        elif clean_path in ("/editor", "/compiler"):
+            query = "?" + self.path.split('?')[1] if '?' in self.path else ""
+            self.path = "/editor.html" + query
+            super().do_GET()
         else:
             super().do_GET()
 
