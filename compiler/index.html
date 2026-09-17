@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="codedex-dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codédex Compiler — 8-Bit Coding Adventure</title>
+    <meta name="description" content="A cozy, delightful, retro gamified online compiler and cloud IDE inspired by Codédex. Built with Monaco Editor and local multi-language execution.">
+    <!-- Google Fonts: Press Start 2P (Retro Game), Plus Jakarta Sans (Friendly UI), JetBrains Mono (Code) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="theme.js"></script>
+    <!-- Monaco Editor Loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <!-- Canvas Confetti for Level-Up Celebrations -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+    <div class="codedex-app">
+        <!-- ===== RETRO TOPBAR ===== -->
+        <header class="codedex-topbar">
+            <!-- Left Brand -->
+            <div class="topbar-left">
+                <a href="#" class="codedex-logo">
+                    <img src="assets/duck.jpg" alt="Codédex IDE" class="logo-duck-avatar">
+                    <div class="logo-text-group">
+                        <span class="logo-title">CODÉDEX</span>
+                        <span class="logo-sub">IDE</span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Center Controls -->
+            <div class="topbar-center">
+                <!-- Language Selector Dropdown (Arcade Style) -->
+                <div class="arcade-dropdown-wrapper" id="langDropdownWrapper">
+                    <button class="arcade-btn lang-btn" id="langDropdownBtn">
+                        <span class="lang-icon" id="currentLangIcon"><i class="fa-solid fa-c"></i></span>
+                        <span class="lang-name" id="currentLangName">C (GCC)</span>
+                        <i class="fa-solid fa-caret-down"></i>
+                    </button>
+                    <div class="arcade-dropdown-menu" id="langDropdownMenu">
+                        <div class="dropdown-item active" data-lang="c">
+                            <span class="pixel-dot" style="background:#00d2d3;"></span>
+                            <span class="item-name">C (GCC 13)</span>
+                            <span class="item-badge">⚔️ Low-Level</span>
+                        </div>
+                        <div class="dropdown-item" data-lang="cpp">
+                            <span class="pixel-dot" style="background:#ff6b8b;"></span>
+                            <span class="item-name">C++ (G++ 13)</span>
+                            <span class="item-badge">⚡ Turbo</span>
+                        </div>
+                        <div class="dropdown-item" data-lang="python">
+                            <span class="pixel-dot" style="background:#ffd166;"></span>
+                            <span class="item-name">Python 3.11</span>
+                            <span class="item-badge">🐍 Snake Master</span>
+                        </div>
+                        <div class="dropdown-item" data-lang="javascript">
+                            <span class="pixel-dot" style="background:#feca57;"></span>
+                            <span class="item-name">JavaScript</span>
+                            <span class="item-badge">🌐 Web Mage</span>
+                        </div>
+                        <div class="dropdown-item" data-lang="typescript">
+                            <span class="pixel-dot" style="background:#54a0ff;"></span>
+                            <span class="item-name">TypeScript</span>
+                            <span class="item-badge">🛡️ Typed</span>
+                        </div>
+                        <div class="dropdown-item" data-lang="java">
+                            <span class="pixel-dot" style="background:#ff9f43;"></span>
+                            <span class="item-name">Java 21</span>
+                            <span class="item-badge">☕ Coffee Run</span>
+                        </div>
+                        <div class="dropdown-item" data-lang="go">
+                            <span class="pixel-dot" style="background:#48dbfb;"></span>
+                            <span class="item-name">Go</span>
+                            <span class="item-badge">🐹 Gopher</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Primary Tactile Green Run Button -->
+                <button class="arcade-btn btn-run-quest" id="btnRun" title="Run Code (Ctrl + Enter)">
+                    <span class="btn-inner">
+                        <i class="fa-solid fa-play"></i>
+                        <span>RUN CODE</span>
+                        <span class="key-hint">Ctrl+↵</span>
+                    </span>
+                </button>
+
+                <!-- AI Assist Trigger -->
+                <button class="arcade-btn btn-duck-ai" id="btnAiQuick" title="Ask AI Assistant">
+                    <span class="btn-inner">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>AI ASSIST</span>
+                    </span>
+                </button>
+
+                <!-- Auto-Format Button -->
+                <button class="arcade-btn btn-mini" id="btnFormat" title="Clean & Format Code (Shift+Alt+F)">
+                    <i class="fa-solid fa-align-left"></i>
+                </button>
+
+                <!-- Auto-Fix Code Button -->
+                <button class="arcade-btn btn-mini" id="btnFixTop" title="Auto-Fix & Rewrite Crashed Code" style="color: var(--color-yellow);">
+                    <i class="fa-solid fa-wrench"></i>
+                    <span>AUTO-FIX</span>
+                </button>
+            </div>
+
+            <!-- Right Controls -->
+            <div class="topbar-right">
+                <!-- Sound Effects Toggle -->
+                <button class="arcade-btn btn-icon-round" id="btnSound" title="Toggle Sound Effects">
+                    <i class="fa-solid fa-volume-high" id="soundIcon"></i>
+                </button>
+
+                <!-- Theme Toggle -->
+                <div class="arcade-dropdown-wrapper" id="themeDropdownWrapper">
+                    <button class="arcade-btn btn-icon-round" id="btnTheme" title="Change Theme">
+                        <i class="fa-solid fa-palette"></i>
+                    </button>
+                    <div class="arcade-dropdown-menu dropdown-right" id="themeDropdownMenu">
+                        <div class="dropdown-header">🎨 AESTHETIC PIXEL THEMES</div>
+                        <div class="dropdown-item active" data-theme="pixel-twilight">
+                            <span class="theme-icon">🌌</span>
+                            <span>Celeste Dusk</span>
+                        </div>
+                        <div class="dropdown-item" data-theme="pixel-botanical">
+                            <span class="theme-icon">🌲</span>
+                            <span>Stardew Moss</span>
+                        </div>
+                        <div class="dropdown-item" data-theme="pixel-lofi">
+                            <span class="theme-icon">☕</span>
+                            <span>Coffee Talk Espresso</span>
+                        </div>
+                        <div class="dropdown-item" data-theme="pixel-sakura">
+                            <span class="theme-icon">🌸</span>
+                            <span>Ghibli Linen (Light)</span>
+                        </div>
+                        <div class="dropdown-item" data-theme="pixel-synthdusk">
+                            <span class="theme-icon">🔮</span>
+                            <span>Hyper Light Synth</span>
+                        </div>
+                        <div class="dropdown-item" data-theme="pixel-nordic">
+                            <span class="theme-icon">❄️</span>
+                            <span>Nordic Aurora</span>
+                        </div>
+                        <div class="dropdown-item" data-theme="pixel-gameboy">
+                            <span class="theme-icon">🕹️</span>
+                            <span>Game Boy Pocket 1989</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Download & Share -->
+                <button class="arcade-btn btn-icon-round" id="btnDownload" title="Download Code Scroll">
+                    <i class="fa-solid fa-download"></i>
+                </button>
+                <button class="arcade-btn btn-icon-round" id="btnShare" title="Share Quest Link">
+                    <i class="fa-solid fa-share-nodes"></i>
+                </button>
+
+                <!-- Settings -->
+                <button class="arcade-btn btn-icon-round" id="btnSettings" title="IDE Settings">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- ===== MAIN WORKSPACE ===== -->
+        <main class="codedex-workspace">
+            <!-- Left Activity Dock -->
+            <aside class="quest-activity-dock">
+                <button class="dock-item active" id="actFiles" title="Files">
+                    <span class="dock-emoji">📁</span>
+                    <span class="dock-label">Files</span>
+                </button>
+                <button class="dock-item" id="actSnippets" title="Code Snippets">
+                    <span class="dock-emoji">📝</span>
+                    <span class="dock-label">Snippets</span>
+                </button>
+                <div class="dock-spacer"></div>
+                <button class="dock-item" id="actShortcuts" title="Keyboard Shortcuts">
+                    <span class="dock-emoji">⌨️</span>
+                    <span class="dock-label">Keys</span>
+                </button>
+            </aside>
+
+            <!-- Collapsible Side Snippets Drawer -->
+            <div class="quest-drawer" id="sideDrawer" style="display: none;">
+                <div class="drawer-header">
+                    <span class="drawer-title" id="drawerTitle">📝 CODE SNIPPETS</span>
+                    <button class="drawer-close" id="drawerClose"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="drawer-content" id="drawerContent">
+                    <!-- Dynamic Snippet Cards -->
+                </div>
+            </div>
+
+            <!-- Center Code Editor Pane -->
+            <section class="codedex-editor-pane">
+                <!-- Tab Bar -->
+                <div class="codedex-tab-bar">
+                    <div class="tabs-list" id="tabsList">
+                        <div class="quest-tab active" data-tab-id="1">
+                            <span class="tab-badge">C</span>
+                            <span class="tab-name">main.c</span>
+                        </div>
+                    </div>
+                    <button class="btn-add-tab" id="btnAddTab" title="New Scroll (+)">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                    <div class="tab-tools">
+                        <button class="tool-btn" id="btnFixTab" title="Auto-Fix Code with AI" style="color: var(--color-yellow);"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                        <button class="tool-btn" id="btnResetCode" title="Reset Scroll"><i class="fa-solid fa-rotate-left"></i></button>
+                        <button class="tool-btn" id="btnCopyCode" title="Copy Scroll"><i class="fa-regular fa-copy"></i></button>
+                    </div>
+                </div>
+
+                <!-- Monaco Editor Container -->
+                <div class="monaco-wrapper">
+                    <div id="monaco-container"></div>
+                </div>
+            </section>
+
+            <!-- Tactile Pane Resizer -->
+            <div class="codedex-resizer" id="paneResizer">
+                <div class="resizer-knob"></div>
+            </div>
+
+            <!-- Right Quest Log & Duck Wizard Pane -->
+            <section class="codedex-output-pane">
+                <!-- Output Navigation Tabs -->
+                <div class="quest-tabs-bar">
+                    <div class="output-tabs">
+                        <button class="qtab active" data-pane="console">
+                            <span class="qtab-emoji"><i class="fa-solid fa-terminal"></i></span>
+                            <span>Console</span>
+                        </button>
+                        <button class="qtab" data-pane="stdin">
+                            <span class="qtab-emoji"><i class="fa-solid fa-keyboard"></i></span>
+                            <span>Input (Stdin)</span>
+                            <span class="qtab-dot" id="stdinIndicator" style="display:none;"></span>
+                        </button>
+                        <button class="qtab" data-pane="ai">
+                            <span class="qtab-emoji"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                            <span>AI Assistant</span>
+                        </button>
+                    </div>
+
+                    <div class="output-meta">
+                        <span class="spell-timer" id="execTimeBadge" style="display: none;">
+                            ⏱️ <span id="execTimeVal">0ms</span>
+                        </span>
+                        <span class="quest-status ready" id="statusBadge">
+                            <span class="status-heart"><i class="fa-solid fa-circle-check"></i></span>
+                            <span class="status-txt" id="statusText">Ready</span>
+                        </span>
+                        <button class="tool-btn" id="btnClearOutput" title="Clear Console"><i class="fa-solid fa-broom"></i></button>
+                        <button class="tool-btn" id="btnCopyOutput" title="Copy Output"><i class="fa-regular fa-copy"></i></button>
+                    </div>
+                </div>
+
+                <!-- Views Container -->
+                <div class="quest-views">
+                    <!-- 1. Console View -->
+                    <div class="quest-panel active" id="viewConsole">
+                        <div class="console-screen" id="consoleBody">
+                            <div class="console-intro">
+                                <div class="intro-art">
+                                    <pre class="pixel-banner">
+  CODÉDEX ONLINE COMPILER
+  Ready for code execution.
+                                    </pre>
+                                </div>
+                                <p class="intro-msg">Press <span class="kbd-badge">RUN CODE</span> or hit <span class="kbd-badge">Ctrl + Enter</span> to execute.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Stdin View -->
+                    <div class="quest-panel" id="viewStdin">
+                        <div class="backpack-container">
+                            <div class="backpack-banner">
+                                <span class="bp-icon"><i class="fa-solid fa-keyboard"></i></span>
+                                <div>
+                                    <strong>Standard Input (Stdin)</strong>
+                                    <p>Inputs typed here are sent directly to <code>scanf</code>, <code>cin</code>, or <code>input()</code>.</p>
+                                </div>
+                            </div>
+                            <textarea id="stdinInput" class="backpack-input" placeholder="Type standard input values here (e.g. numbers, words, test cases)..." spellcheck="false"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- 3. AI Assistant View -->
+                    <div class="quest-panel" id="viewAi">
+                        <div class="duck-ai-container">
+                            <!-- Gemini Cloud AI Status Banner -->
+                            <div class="ai-key-status-bar" id="aiKeyStatusBar">
+                                <div class="ai-key-badge">
+                                    <span class="pulse-dot-ai" id="aiKeyDot"></span>
+                                    <span id="aiKeyStatusText">Local AI Active (Add Gemini API Key for Ultra Mode)</span>
+                                </div>
+                                <button class="btn-config-key" id="btnConfigKey" title="Configure Gemini API Key">
+                                    <i class="fa-solid fa-key"></i> <span id="btnConfigKeyText">Set Key</span>
+                                </button>
+                            </div>
+
+                            <!-- Action Quick Chips -->
+                            <div class="spells-bar">
+                                <button class="spell-chip" data-action="debug">
+                                    <span><i class="fa-solid fa-wrench"></i></span> Fix Bugs
+                                </button>
+                                <button class="spell-chip" data-action="explain">
+                                    <span><i class="fa-solid fa-book-open"></i></span> Explain Code
+                                </button>
+                                <button class="spell-chip" data-action="optimize">
+                                    <span><i class="fa-solid fa-bolt"></i></span> Optimize
+                                </button>
+                                <button class="spell-chip" data-action="document">
+                                    <span><i class="fa-solid fa-code"></i></span> Add Comments
+                                </button>
+                                <button class="spell-chip" data-action="security">
+                                    <span><i class="fa-solid fa-shield-halved"></i></span> Security Check
+                                </button>
+                            </div>
+
+                            <!-- Chat Messages -->
+                            <div class="wizard-messages" id="aiMessages">
+                                <div class="wizard-msg assistant">
+                                    <div class="msg-avatar-icon"><i class="fa-solid fa-robot"></i></div>
+                                    <div class="msg-bubble">
+                                        <div class="bubble-speaker">AI Assistant</div>
+                                        <p>Hello! I am your AI coding assistant. I can help debug compile errors, explain complex logic, optimize algorithms, or verify code correctness. Choose an action above or type your question below.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Interactive Prompt Bar -->
+                            <div class="wizard-prompt-bar">
+                                <input type="text" id="aiPromptInput" placeholder="Ask AI Assistant for debugging, optimization, or explanations...">
+                                <button class="arcade-btn btn-send-spell" id="btnSendAi" title="Send question">
+                                    <span>SEND</span> <i class="fa-solid fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- ===== RETRO BOTTOM STATUS BAR ===== -->
+        <footer class="codedex-statusbar">
+            <div class="sb-left">
+                <span class="sb-item"><span class="pulse-dot"></span> <strong id="sbReady">Ready</strong></span>
+                <span class="sb-item" id="sbLang"><i class="fa-solid fa-code"></i> C (GCC)</span>
+            </div>
+            <div class="sb-right">
+                <span class="sb-item" id="sbCursor">Ln 1, Col 1</span>
+                <span class="sb-item">Tab Size: 4</span>
+                <span class="sb-item">UTF-8</span>
+                <span class="sb-item" id="sbThemeName">Celeste Dusk</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ===== MODALS ===== -->
+    <!-- Settings Modal -->
+    <div class="retro-modal-overlay" id="modalSettings">
+        <div class="retro-modal-box">
+            <div class="modal-header">
+                <h3>⚙️ EDITOR SETTINGS</h3>
+                <button class="modal-close" data-close="modalSettings"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-item">
+                    <div>
+                        <strong>Font Scale</strong>
+                        <p>Editor font size in pixels</p>
+                    </div>
+                    <select id="settingFontSize" class="retro-select">
+                        <option value="12">12px Tiny</option>
+                        <option value="13">13px Small</option>
+                        <option value="14" selected>14px Cozy (Default)</option>
+                        <option value="16">16px Large</option>
+                        <option value="18">18px Giant</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <div>
+                        <strong>8-Bit Sound Effects</strong>
+                        <p>Play retro blips and action sounds</p>
+                    </div>
+                    <label class="retro-toggle">
+                        <input type="checkbox" id="settingSound" checked>
+                        <span class="retro-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <div>
+                        <strong>Code Minimap</strong>
+                        <p>Show code overview minimap on right</p>
+                    </div>
+                    <label class="retro-toggle">
+                        <input type="checkbox" id="settingMinimap" checked>
+                        <span class="retro-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <div>
+                        <strong>Word Wrap</strong>
+                        <p>Wrap overflowing lines</p>
+                    </div>
+                    <label class="retro-toggle">
+                        <input type="checkbox" id="settingWordWrap">
+                        <span class="retro-slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-section-title">✨ GOOGLE GEMINI AI KEY</div>
+                <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                    <div>
+                        <strong>Google Gemini API Key</strong>
+                        <p>Powers 1-click Auto-Fix, compiler debugging, algorithmic code writing, and live chat.</p>
+                    </div>
+                    <div style="display: flex; gap: 8px; width: 100%; margin-top: 4px;">
+                        <input type="password" id="settingGeminiKey" class="retro-input" placeholder="Paste Gemini API Key (e.g. AIzaSy...)" style="flex: 1; padding: 7px 10px;">
+                        <button class="arcade-btn" id="btnToggleKeyVis" title="Show/Hide Key" style="padding: 7px 12px;"><i class="fa-solid fa-eye" id="eyeKeyIcon"></i></button>
+                        <button class="arcade-btn" id="btnSaveGeminiKey" style="background: var(--color-green); color: #fff; padding: 7px 14px; font-weight: 700;">SAVE</button>
+                    </div>
+                    <div style="font-size: 11.5px; margin-top: 4px;">
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="color: var(--color-cyan); text-decoration: underline; display: inline-flex; align-items: center; gap: 5px;">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Get free Gemini API Key from Google AI Studio
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shortcuts Modal -->
+    <div class="retro-modal-overlay" id="modalShortcuts">
+        <div class="retro-modal-box">
+            <div class="modal-header">
+                <h3>⌨️ KEYBOARD SHORTCUTS</h3>
+                <button class="modal-close" data-close="modalShortcuts"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="keys-list">
+                    <div class="key-row"><span>Run Code</span><kbd>Ctrl + Enter</kbd></div>
+                    <div class="key-row"><span>Format Document</span><kbd>Shift + Alt + F</kbd></div>
+                    <div class="key-row"><span>Find</span><kbd>Ctrl + F</kbd></div>
+                    <div class="key-row"><span>Replace</span><kbd>Ctrl + H</kbd></div>
+                    <div class="key-row"><span>Open AI Assistant</span><kbd>Ctrl + I</kbd></div>
+                    <div class="key-row"><span>Toggle Line Comment</span><kbd>Ctrl + /</kbd></div>
+                    <div class="key-row"><span>New File / Tab</span><kbd>Ctrl + Alt + N</kbd></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Banner -->
+    <div class="retro-toast" id="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
