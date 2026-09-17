@@ -183,11 +183,11 @@ int main() {
     // ===== Application State =====
     let editor = null;
     let currentLang = 'c';
-    let currentTheme = localStorage.getItem('codedex_theme') || 'pixel-twilight';
-    const legacyThemes = ['codedex-dark', 'codedex-meadow', 'codedex-dungeon', 'theme-gameboy', 'theme-synthwave', 'theme-lava', 'theme-lofi', 'theme-bubblegum'];
+    let currentTheme = localStorage.getItem('codedex_theme') || 'darryl-cream';
+    const legacyThemes = ['codedex-dark', 'codedex-meadow', 'codedex-dungeon', 'theme-gameboy', 'theme-synthwave', 'theme-lava', 'theme-lofi', 'theme-bubblegum', 'pixel-gameboy', 'pixel-nordic'];
     if (legacyThemes.includes(currentTheme)) {
-        currentTheme = 'pixel-twilight';
-        localStorage.setItem('codedex_theme', 'pixel-twilight');
+        currentTheme = 'darryl-cream';
+        localStorage.setItem('codedex_theme', 'darryl-cream');
     }
     let activeTabId = 1;
     let nextTabId = 2;
@@ -301,6 +301,131 @@ int main() {
     require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
 
     require(['vs/editor/editor.main'], function () {
+        // ⚡ Darryl Cream (Signature Light: Eggshell + Cyber Lime + Ink Black)
+        monaco.editor.defineTheme('darryl-cream', {
+            base: 'vs',
+            inherit: true,
+            rules: [
+                { token: 'keyword', foreground: '151515', fontStyle: 'bold' },
+                { token: 'string', foreground: 'c2410c' },
+                { token: 'number', foreground: '4338ca' },
+                { token: 'comment', foreground: '6f6c65', fontStyle: 'italic' },
+                { token: 'type', foreground: '0f766e', fontStyle: 'bold' },
+                { token: 'function', foreground: '0369a1' },
+                { token: 'delimiter', foreground: '151515' }
+            ],
+            colors: {
+                'editor.background': '#f5f2ea',
+                'editor.foreground': '#151515',
+                'editorLineNumber.foreground': '#9a968d',
+                'editorLineNumber.activeForeground': '#151515',
+                'editor.selectionBackground': '#e9ff9a',
+                'editor.lineHighlightBackground': '#ebe7dd',
+                'editorGutter.background': '#f5f2ea',
+                'editorCursor.foreground': '#151515'
+            }
+        });
+
+        // 🖤 Darryl Carbon (Signature Dark: Carbon Black + Cyber Lime + Crisp White)
+        monaco.editor.defineTheme('darryl-carbon', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [
+                { token: 'keyword', foreground: 'd7ff3f', fontStyle: 'bold' },
+                { token: 'string', foreground: 'fde047' },
+                { token: 'number', foreground: 'a78bfa' },
+                { token: 'comment', foreground: '6f6c65', fontStyle: 'italic' },
+                { token: 'type', foreground: '38bdf8', fontStyle: 'bold' },
+                { token: 'function', foreground: '67e8f9' },
+                { token: 'delimiter', foreground: 'f5f2ea' }
+            ],
+            colors: {
+                'editor.background': '#151515',
+                'editor.foreground': '#f5f2ea',
+                'editorLineNumber.foreground': '#555555',
+                'editorLineNumber.activeForeground': '#d7ff3f',
+                'editor.selectionBackground': '#2c3319',
+                'editor.lineHighlightBackground': '#1e1e1e',
+                'editorGutter.background': '#151515',
+                'editorCursor.foreground': '#d7ff3f'
+            }
+        });
+
+        // 🔮 Cyberpunk Void (Deep Obsidian + Electric Yellow + Cyan)
+        monaco.editor.defineTheme('darryl-cyberpunk', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [
+                { token: 'keyword', foreground: 'ffff00', fontStyle: 'bold' },
+                { token: 'string', foreground: 'ff007f' },
+                { token: 'number', foreground: '00f0ff' },
+                { token: 'comment', foreground: '5c5c7a', fontStyle: 'italic' },
+                { token: 'type', foreground: '00f0ff', fontStyle: 'bold' },
+                { token: 'function', foreground: 'ffff00' },
+                { token: 'delimiter', foreground: 'ffffff' }
+            ],
+            colors: {
+                'editor.background': '#0e0e14',
+                'editor.foreground': '#f0f0ff',
+                'editorLineNumber.foreground': '#44445a',
+                'editorLineNumber.activeForeground': '#ffff00',
+                'editor.selectionBackground': '#2a2a3e',
+                'editor.lineHighlightBackground': '#181824',
+                'editorGutter.background': '#0e0e14',
+                'editorCursor.foreground': '#00f0ff'
+            }
+        });
+
+        // 🟩 Matrix Terminal
+        monaco.editor.defineTheme('darryl-matrix', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [
+                { token: 'keyword', foreground: '39ff14', fontStyle: 'bold' },
+                { token: 'string', foreground: '86efac' },
+                { token: 'number', foreground: '4ade80' },
+                { token: 'comment', foreground: '166534', fontStyle: 'italic' },
+                { token: 'type', foreground: '22c55e', fontStyle: 'bold' },
+                { token: 'function', foreground: '39ff14' },
+                { token: 'delimiter', foreground: 'bbf7d0' }
+            ],
+            colors: {
+                'editor.background': '#090d0b',
+                'editor.foreground': '#86efac',
+                'editorLineNumber.foreground': '#14532d',
+                'editorLineNumber.activeForeground': '#39ff14',
+                'editor.selectionBackground': '#14532d',
+                'editor.lineHighlightBackground': '#0f1712',
+                'editorGutter.background': '#090d0b',
+                'editorCursor.foreground': '#39ff14'
+            }
+        });
+
+        // 🌸 Brutalist Bubblegum
+        monaco.editor.defineTheme('darryl-bubblegum', {
+            base: 'vs',
+            inherit: true,
+            rules: [
+                { token: 'keyword', foreground: 'ff2a55', fontStyle: 'bold' },
+                { token: 'string', foreground: '0284c7' },
+                { token: 'number', foreground: '16a34a' },
+                { token: 'comment', foreground: '94a3b8', fontStyle: 'italic' },
+                { token: 'type', foreground: '9333ea', fontStyle: 'bold' },
+                { token: 'function', foreground: 'ff2a55' },
+                { token: 'delimiter', foreground: '1e293b' }
+            ],
+            colors: {
+                'editor.background': '#faf7f2',
+                'editor.foreground': '#1e293b',
+                'editorLineNumber.foreground': '#cbd5e1',
+                'editorLineNumber.activeForeground': '#ff2a55',
+                'editor.selectionBackground': '#ffe4e6',
+                'editor.lineHighlightBackground': '#f1ebe2',
+                'editorGutter.background': '#faf7f2',
+                'editorCursor.foreground': '#ff2a55'
+            }
+        });
+
         // 🌌 Celeste Dusk (Celestial Twilight / Dreamy Violet & Starlight)
         monaco.editor.defineTheme('pixel-twilight', {
             base: 'vs-dark',
@@ -945,6 +1070,11 @@ int main() {
 
         if (editor) {
             const monacoThemeMap = {
+                'darryl-cream': 'darryl-cream',
+                'darryl-carbon': 'darryl-carbon',
+                'darryl-cyberpunk': 'darryl-cyberpunk',
+                'darryl-matrix': 'darryl-matrix',
+                'darryl-bubblegum': 'darryl-bubblegum',
                 'pixel-twilight': 'pixel-twilight',
                 'pixel-botanical': 'pixel-botanical',
                 'pixel-lofi': 'pixel-lofi',
@@ -953,10 +1083,15 @@ int main() {
                 'pixel-nordic': 'pixel-nordic',
                 'pixel-gameboy': 'pixel-gameboy'
             };
-            monaco.editor.setTheme(monacoThemeMap[theme] || 'pixel-twilight');
+            monaco.editor.setTheme(monacoThemeMap[theme] || 'darryl-cream');
         }
 
         const themeLabels = {
+            'darryl-cream': 'Darryl Cream (Default)',
+            'darryl-carbon': 'Darryl Carbon (Dark)',
+            'darryl-cyberpunk': 'Darryl Cyberpunk',
+            'darryl-matrix': 'Darryl Matrix',
+            'darryl-bubblegum': 'Darryl Bubblegum',
             'pixel-twilight': 'Celeste Dusk',
             'pixel-botanical': 'Stardew Moss',
             'pixel-lofi': 'Coffee Talk Espresso',
@@ -965,7 +1100,7 @@ int main() {
             'pixel-nordic': 'Nordic Aurora',
             'pixel-gameboy': 'Game Boy Pocket 1989'
         };
-        sbThemeName.textContent = themeLabels[theme] || 'Celeste Dusk';
+        sbThemeName.textContent = themeLabels[theme] || 'Darryl Cream';
 
         document.querySelectorAll('#themeDropdownMenu .dropdown-item').forEach(item => {
             item.classList.toggle('active', item.getAttribute('data-theme') === theme);
