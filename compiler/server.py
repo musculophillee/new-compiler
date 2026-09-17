@@ -366,6 +366,63 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
                     diagnosis.append("• Added missing `int main()` entrypoint.")
                     changed = True
 
+                # 1b. Fix parameter lists with semicolon instead of comma: e.g. void push(struct stack*stack;int value)
+                for idx, line in enumerate(pass_lines):
+                    if re.search(r'\b(?:void|int|char|float|double|bool|struct\s+\w+)\s+\w+\s*\([^)]*;[^)]*\)', line):
+                        pass_lines[idx] = re.sub(r'(\([^)]*);([^)]*\))', r'\1,\2', line)
+                        diagnosis.append(f"• **Line {idx+1}**: Replaced `;` with `,` in parameter list.")
+                        changed = True
+
+                # 1c. Fix function definition missing opening brace {
+                for idx, line in enumerate(pass_lines):
+                    s = line.strip()
+                    if re.match(r'^(?:void|int|char|float|double|bool|struct\s+\w+)\s+\w+\s*\([^;{]*\)$', s):
+                        pass_lines[idx] = line + " {"
+                        diagnosis.append(f"• **Line {idx+1}**: Added missing opening `{{` to function.")
+                        changed = True
+
+                # 1d. Define struct stack and isFull if referenced but missing
+                has_struct_stack = any(re.search(r'struct\s+stack\s*\{', l) for l in pass_lines)
+                needs_struct_stack = any("struct stack" in l for l in pass_lines)
+                if needs_struct_stack and not has_struct_stack:
+                    struct_def = [
+                        "#define MAX 100",
+                        "struct stack {",
+                        "    int items[MAX];",
+                        "    int top;",
+                        "};",
+                        "",
+                        "int isFull(struct stack* s) {",
+                        "    return 0;",
+                        "}",
+                        ""
+                    ]
+                    insert_pos = 0
+                    for i, l in enumerate(pass_lines):
+                        if l.startswith("#include"):
+                            insert_pos = i + 1
+                    for item in reversed(struct_def):
+                        pass_lines.insert(insert_pos, item)
+                    diagnosis.append("• Defined `struct stack` and `isFull()` helper.")
+                    changed = True
+
+                # 1e. Fix unclosed braces before int main()
+                for idx, line in enumerate(pass_lines):
+                    if re.search(r'\b(int|void)\s+main\s*\(', line):
+                        pre_depth = sum(l.count("{") - l.count("}") for l in pass_lines[:idx])
+                        if pre_depth > 0:
+                            pass_lines.insert(idx, "}" * pre_depth)
+                            diagnosis.append("• Closed unclosed function before `main()`.")
+                            changed = True
+                            break
+
+                # 1f. Fix typo /n instead of \n in string literals
+                for idx, line in enumerate(pass_lines):
+                    if '/n"' in line:
+                        pass_lines[idx] = line.replace('/n"', '\\n"')
+                        diagnosis.append(f"• **Line {idx+1}**: Fixed newline escape typo `/n` → `\\n`.")
+                        changed = True
+
                 # 2. Track main() boundary
                 main_start = -1
                 main_end = -1

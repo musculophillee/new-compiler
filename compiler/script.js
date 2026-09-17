@@ -1232,9 +1232,27 @@ int main() {
 
                 showToast('Code repaired and written to editor!');
             } else {
-                showToast('AI could not automatically repair code.');
+                if (targetBanner) {
+                    const btn = targetBanner.querySelector('#btnAutoFixBanner');
+                    if (btn) {
+                        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>ASK AI ASSISTANT</span>`;
+                        btn.style.pointerEvents = 'auto';
+                        btn.onclick = () => {
+                            document.querySelector('.qtab[data-pane="ai"]').click();
+                        };
+                    }
+                }
+                const reason = data.response || (data.issues && data.issues.length ? data.issues.join(' ') : 'Could not automatically repair code.');
+                showToast(reason);
             }
         } catch (err) {
+            if (targetBanner) {
+                const btn = targetBanner.querySelector('#btnAutoFixBanner');
+                if (btn) {
+                    btn.innerHTML = `<i class="fa-solid fa-wrench"></i> <span>AUTO-FIX</span>`;
+                    btn.style.pointerEvents = 'auto';
+                }
+            }
             showToast('Auto-Fix error: ' + err.message);
         }
     }
