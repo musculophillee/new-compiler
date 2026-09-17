@@ -39,9 +39,13 @@
     --color-accent-fg: #151515;
     --color-run: #d7ff3f;
 
-    --color-console-bg: #151515;
-    --color-console-fg: #d7ff3f;
-    --color-console-text: #f5f2ea;
+    /* Terminal Side Palette - Unified with Darryl Cream */
+    --color-console-bg: #ffffff;
+    --color-console-fg: #151515;
+    --color-console-text: #151515;
+    --color-console-meta: #6f6c65;
+    --color-console-banner-bg: #f5f2ea;
+    --color-console-banner-border: #151515;
 
     --shadow-pixel-xs: 2px 2px 0px #151515;
     --shadow-pixel-sm: 3px 3px 0px #151515;
@@ -73,9 +77,12 @@
     --color-accent-soft: #273600;
     --color-accent-fg: #151515;
 
-    --color-console-bg: #0d0d0d;
+    --color-console-bg: #181818;
     --color-console-fg: #d7ff3f;
     --color-console-text: #f5f2ea;
+    --color-console-meta: #a39e94;
+    --color-console-banner-bg: #121212;
+    --color-console-banner-border: #383838;
 
     --shadow-pixel-xs: 2px 2px 0px #000000;
     --shadow-pixel-sm: 3px 3px 0px #000000;
@@ -866,7 +873,7 @@ html, body {
     min-width: 320px;
     display: flex;
     flex-direction: column;
-    background: var(--color-console-bg);
+    background: var(--color-bg-elevated);
     border: 2px solid var(--color-border);
     box-shadow: 6px 6px 0px var(--color-border);
     overflow: hidden;
@@ -878,8 +885,8 @@ html, body {
     align-items: center;
     justify-content: space-between;
     height: var(--tab-height);
-    background: #1c1c1c;
-    border-bottom: 2px solid #333333;
+    background: var(--color-bg-surface);
+    border-bottom: 2px solid var(--color-border);
     padding: 0 8px;
 }
 
@@ -893,11 +900,11 @@ html, body {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    height: 26px;
+    height: 28px;
     padding: 0 10px;
-    background: #252525;
-    border: 1px solid #3a3a3a;
-    color: #9a968d;
+    background: var(--color-bg-surface);
+    border: 1.5px solid var(--color-border);
+    color: var(--color-fg-muted);
     font-family: var(--font-display);
     font-size: 11px;
     font-weight: 700;
@@ -910,24 +917,24 @@ html, body {
 .qtab-num {
     font-family: var(--font-mono);
     font-size: 9px;
-    color: #6f6c65;
+    font-weight: 700;
+    padding: 1px 4px;
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    border: 1px solid var(--color-border);
 }
 
 .qtab:hover {
-    background: #2f2f2f;
-    color: #ffffff;
+    background: var(--color-bg-hover);
+    color: var(--color-fg-main);
 }
 
 .qtab.active {
-    background: var(--color-accent);
-    color: #151515;
-    border: 1px solid #151515;
-    box-shadow: 2px 2px 0px #000000;
+    background: var(--color-bg-elevated);
+    color: var(--color-fg-main);
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-pixel-xs);
     font-weight: 800;
-}
-
-.qtab.active .qtab-num {
-    color: #151515;
 }
 
 .qtab-dot {
@@ -973,7 +980,7 @@ html, body {
     flex: 1;
     position: relative;
     overflow: hidden;
-    background: var(--color-bg-main);
+    background: var(--color-bg-elevated);
 }
 
 .quest-panel {
@@ -994,9 +1001,9 @@ html, body {
     background: var(--color-console-bg);
     color: var(--color-console-text);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 12.5px;
     line-height: 1.6;
-    padding: 14px;
+    padding: 16px;
     overflow-y: auto;
     word-break: break-word;
     white-space: pre-wrap;
@@ -1008,40 +1015,47 @@ html, body {
     align-items: center;
     justify-content: space-between;
     padding-bottom: 8px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid #282828;
+    margin-bottom: 12px;
+    border-bottom: 1.5px dashed var(--color-border-subtle);
     font-family: var(--font-mono);
     font-size: 10px;
-    color: #6f6c65;
+    color: var(--color-console-meta);
 }
 
 .terminal-status {
-    color: var(--color-accent);
+    color: #10b981;
+    font-weight: 700;
 }
 
 .pixel-banner {
     font-family: var(--font-mono);
-    font-weight: 500;
+    font-weight: 600;
     color: var(--color-console-fg);
+    background: var(--color-console-banner-bg);
+    border: 1.5px solid var(--color-console-banner-border);
+    padding: 10px 12px;
     font-size: 11px;
     line-height: 1.4;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 .out-success {
     color: var(--color-console-text);
+    font-weight: 600;
 }
 
 .out-error {
-    color: #ff60a8;
-    background: rgba(255, 96, 168, 0.08);
-    border-left: 2px solid #ff60a8;
-    padding: 4px 8px;
-    margin: 4px 0;
+    color: #e11d48;
+    background: rgba(225, 29, 72, 0.08);
+    border-left: 3px solid #e11d48;
+    padding: 6px 10px;
+    margin: 6px 0;
+    font-weight: 600;
 }
 
 .out-info {
-    color: var(--color-accent);
+    color: var(--color-console-meta);
+    font-style: italic;
 }
 
 /* 7.2 Stdin View */
