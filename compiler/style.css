@@ -543,13 +543,17 @@ html, body {
     height: calc(100vh - var(--topbar-height) - var(--statusbar-height));
     position: relative;
     overflow: hidden;
+    padding: 12px 16px;
+    gap: 12px;
+    box-sizing: border-box;
 }
 
-/* Minimalist Activity Strip (NO bulky yellow boxes!) */
+/* Minimalist Activity Strip */
 .quest-activity-dock {
     width: var(--activity-width);
     background: var(--color-bg-surface);
-    border-right: 2px solid var(--color-border);
+    border: 2px solid var(--color-border);
+    box-shadow: 4px 4px 0px var(--color-border);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -560,8 +564,8 @@ html, body {
 }
 
 .dock-item {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -603,7 +607,8 @@ html, body {
 .quest-drawer {
     width: 280px;
     background: var(--color-bg-elevated);
-    border-right: 2px solid var(--color-border);
+    border: 2px solid var(--color-border);
+    box-shadow: 6px 6px 0px var(--color-border);
     display: flex;
     flex-direction: column;
     z-index: 20;
@@ -679,8 +684,9 @@ html, body {
     display: flex;
     flex-direction: column;
     min-width: 320px;
-    background: var(--color-bg-main);
-    border-right: 2px solid var(--color-border);
+    background: var(--color-bg-elevated);
+    border: 2px solid var(--color-border);
+    box-shadow: 6px 6px 0px var(--color-border);
     position: relative;
     overflow: hidden;
 }
@@ -828,16 +834,15 @@ html, body {
 
 /* Resizer */
 .codedex-resizer {
-    width: 8px;
-    background: var(--color-bg-surface);
-    border-left: 1px solid var(--color-border);
-    border-right: 1px solid var(--color-border);
+    width: 6px;
+    margin: 0 -3px;
+    background: transparent;
     cursor: col-resize;
     display: flex;
     align-items: center;
     justify-content: center;
     user-select: none;
-    z-index: 15;
+    z-index: 20;
     transition: background-color 0.1s ease;
 }
 
@@ -861,7 +866,9 @@ html, body {
     min-width: 320px;
     display: flex;
     flex-direction: column;
-    background: var(--color-bg-surface);
+    background: var(--color-console-bg);
+    border: 2px solid var(--color-border);
+    box-shadow: 6px 6px 0px var(--color-border);
     overflow: hidden;
     position: relative;
 }
@@ -871,26 +878,26 @@ html, body {
     align-items: center;
     justify-content: space-between;
     height: var(--tab-height);
-    background: var(--color-bg-surface);
-    border-bottom: 2px solid var(--color-border);
+    background: #1c1c1c;
+    border-bottom: 2px solid #333333;
     padding: 0 8px;
 }
 
 .output-tabs {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
 }
 
 .qtab {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    height: 28px;
+    height: 26px;
     padding: 0 10px;
-    background: var(--color-bg-surface);
-    border: 1.5px solid var(--color-border);
-    color: var(--color-fg-muted);
+    background: #252525;
+    border: 1px solid #3a3a3a;
+    color: #9a968d;
     font-family: var(--font-display);
     font-size: 11px;
     font-weight: 700;
@@ -903,23 +910,24 @@ html, body {
 .qtab-num {
     font-family: var(--font-mono);
     font-size: 9px;
-    color: var(--color-fg-subtle);
+    color: #6f6c65;
 }
 
 .qtab:hover {
-    background: var(--color-bg-hover);
-    color: var(--color-fg-main);
+    background: #2f2f2f;
+    color: #ffffff;
 }
 
 .qtab.active {
-    background: var(--color-fg-main);
-    color: var(--color-accent);
-    border: 2px solid var(--color-border);
-    box-shadow: var(--shadow-pixel-xs);
+    background: var(--color-accent);
+    color: #151515;
+    border: 1px solid #151515;
+    box-shadow: 2px 2px 0px #000000;
+    font-weight: 800;
 }
 
 .qtab.active .qtab-num {
-    color: var(--color-accent);
+    color: #151515;
 }
 
 .qtab-dot {

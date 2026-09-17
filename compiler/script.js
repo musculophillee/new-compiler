@@ -315,13 +315,13 @@ int main() {
                 { token: 'delimiter', foreground: '151515' }
             ],
             colors: {
-                'editor.background': '#f5f2ea',
+                'editor.background': '#ffffff',
                 'editor.foreground': '#151515',
-                'editorLineNumber.foreground': '#9a968d',
+                'editorLineNumber.foreground': '#a8a29e',
                 'editorLineNumber.activeForeground': '#151515',
                 'editor.selectionBackground': '#e9ff9a',
-                'editor.lineHighlightBackground': '#ebe7dd',
-                'editorGutter.background': '#f5f2ea',
+                'editor.lineHighlightBackground': '#fbfaf8',
+                'editorGutter.background': '#fdfcfb',
                 'editorCursor.foreground': '#151515'
             }
         });
@@ -834,8 +834,10 @@ int main() {
         editor = monaco.editor.create(document.getElementById('monaco-container'), {
             model: initialModel,
             theme: currentTheme,
-            fontFamily: "'JetBrains Mono', Consolas, monospace",
+            fontFamily: "'DM Mono', 'JetBrains Mono', Consolas, monospace",
             fontSize: parseInt(localStorage.getItem('codedex_fontsize') || '14', 10),
+            lineHeight: 24,
+            letterSpacing: 0.3,
             tabSize: 4,
             minimap: { enabled: localStorage.getItem('codedex_minimap') !== 'false' },
             wordWrap: localStorage.getItem('codedex_wordwrap') === 'true' ? 'on' : 'off',
@@ -1224,6 +1226,16 @@ int main() {
     function renderOutput(data) {
         consoleBody.innerHTML = '';
 
+        // Terminal System Metadata Bar
+        const metaEl = document.createElement('div');
+        metaEl.className = 'terminal-meta-bar';
+        const timestamp = new Date().toLocaleTimeString();
+        metaEl.innerHTML = `
+            <span class="meta-tag">[ ${LANGUAGES[currentLang].name.toUpperCase()} // EXIT: ${data.exitCode !== undefined ? data.exitCode : 0} ]</span>
+            <span class="terminal-status">${data.success ? '● SUCCESS (' + (data.time || 0) + 'ms)' : '▲ FAILED (' + (data.time || 0) + 'ms)'}</span>
+        `;
+        consoleBody.appendChild(metaEl);
+
         if (data.stdout) {
             const outEl = document.createElement('div');
             outEl.className = 'out-success';
@@ -1239,21 +1251,24 @@ int main() {
         }
 
         if (!data.stdout && !data.stderr) {
-            consoleBody.innerHTML = `<div class="intro-msg">Program finished with no output.</div>`;
+            const emptyEl = document.createElement('div');
+            emptyEl.className = 'out-info';
+            emptyEl.textContent = 'Process finished with code 0 (no output written).';
+            consoleBody.appendChild(emptyEl);
         }
 
         if (data.success) {
             // Clear any previous error markers
             if (editor) monaco.editor.setModelMarkers(editor.getModel(), 'compiler', []);
             statusBadge.className = 'quest-status ready';
-            statusBadge.innerHTML = `<span class="status-heart"><i class="fa-solid fa-circle-check"></i></span><span class="status-txt">Success</span>`;
-            statusText.textContent = 'Success';
-            if (sbReady) sbReady.textContent = 'Ready';
+            statusBadge.innerHTML = `<span class="status-heart"><i class="fa-solid fa-circle"></i></span><span class="status-txt">SUCCESS</span>`;
+            statusText.textContent = 'SUCCESS';
+            if (sbReady) sbReady.textContent = 'READY';
             playSound('success');
         } else {
             statusBadge.className = 'quest-status error';
-            statusBadge.innerHTML = `<span class="status-heart"><i class="fa-solid fa-triangle-exclamation out-error"></i></span><span class="status-txt out-error">Compilation Error</span>`;
-            if (sbReady) sbReady.textContent = 'Error';
+            statusBadge.innerHTML = `<span class="status-heart"><i class="fa-solid fa-triangle-exclamation out-error"></i></span><span class="status-txt out-error">FAILED</span>`;
+            if (sbReady) sbReady.textContent = 'ERROR';
             playSound('error');
 
             // Highlight error in Monaco Editor & Render Auto-Fix Banner
