@@ -903,6 +903,10 @@ int main() {
         renderTabs();
         updateLanguageDisplay(currentLang);
         displayPreloadedHelloWorld(currentLang);
+
+        window.addEventListener('resize', () => {
+            if (editor) editor.layout();
+        });
     });
 
     // ===== Pre-loaded Hello World Console Engine =====

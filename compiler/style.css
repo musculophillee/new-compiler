@@ -1906,38 +1906,374 @@ html, body {
 }
 
 /* ==========================================================================
-   10. RESPONSIVE
+   10. RESPONSIVE (TABLETS & PHONES)
    ========================================================================== */
 
 @media (max-width: 1024px) {
+    .codedex-workspace {
+        padding: 10px;
+        gap: 10px;
+    }
     .codedex-output-pane {
         width: 380px;
+        min-width: 320px;
     }
 }
 
 @media (max-width: 768px) {
+    html, body {
+        height: auto;
+        min-height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .codedex-app {
+        height: auto;
+        min-height: 100vh;
+        overflow-x: hidden;
+        overflow-y: visible;
+    }
+
     .codedex-topbar {
         height: auto;
+        min-height: 52px;
         padding: 8px 12px;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 8px 12px;
     }
+
+    .topbar-left {
+        flex: 1;
+    }
+
+    .topbar-right {
+        gap: 6px;
+    }
+
     .topbar-center {
         order: 3;
         width: 100%;
-        justify-content: space-between;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 2px;
+        scrollbar-width: none;
     }
+
+    .topbar-center::-webkit-scrollbar {
+        display: none;
+    }
+
+    .key-hint {
+        display: none !important;
+    }
+
+    .btn-run-quest {
+        flex-shrink: 0;
+        height: 34px;
+        padding: 0 12px;
+    }
+
+    .btn-duck-ai,
+    .arcade-btn.btn-mini {
+        flex-shrink: 0;
+        height: 34px;
+        padding: 0 10px;
+        font-size: 11px;
+    }
+
+    .lang-btn {
+        flex-shrink: 0;
+        height: 34px;
+        padding: 0 10px;
+        font-size: 11px;
+    }
+
+    /* Workspace Vertical Stack */
     .codedex-workspace {
         flex-direction: column;
+        height: auto;
+        min-height: auto;
+        padding: 8px 10px;
+        gap: 10px;
+        overflow: visible;
     }
+
     .quest-activity-dock {
         width: 100%;
-        height: 38px;
+        height: 40px;
         flex-direction: row;
+        justify-content: center;
+        padding: 0 8px;
+        gap: 12px;
+    }
+
+    .dock-item {
+        width: 32px;
+        height: 32px;
+    }
+
+    .dock-spacer {
+        display: none;
+    }
+
+    .codedex-resizer {
+        display: none !important;
+    }
+
+    .codedex-editor-pane {
+        flex: none !important;
+        width: 100% !important;
+        height: 400px;
+        min-height: 320px;
+        box-shadow: var(--shadow-pixel-sm);
+    }
+
+    .codedex-output-pane {
+        flex: none !important;
+        width: 100% !important;
+        height: 440px;
+        min-height: 360px;
+        box-shadow: var(--shadow-pixel-sm);
+    }
+
+    /* Modals & Drawers on Mobile */
+    .quest-drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 85%;
+        max-width: 320px;
+        z-index: 1000;
+        height: 100%;
+    }
+
+    .quest-modal {
+        width: 94% !important;
+        max-width: 480px !important;
+        margin: 20px auto;
+        max-height: 88vh;
+    }
+
+    .arcade-dropdown-menu {
+        max-width: 90vw;
+        max-height: 65vh;
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 540px) {
+    .codedex-topbar {
+        padding: 6px 8px;
+        gap: 6px;
+    }
+
+    .logo-title {
+        font-size: 15px;
+    }
+
+    .logo-sub {
+        font-size: 8px;
+        padding: 1px 4px;
+    }
+
+    .pixel-brand-mark {
+        padding: 3px;
+    }
+
+    .btn-icon-round {
+        width: 30px;
+        height: 30px;
+        font-size: 11px;
+    }
+
+    .topbar-center {
+        gap: 4px;
+    }
+
+    .btn-run-quest {
+        height: 32px;
+        padding: 0 10px;
+        font-size: 11px;
+    }
+
+    .btn-duck-ai,
+    .arcade-btn.btn-mini {
+        height: 32px;
+        padding: 0 8px;
+        font-size: 10px;
+    }
+
+    .lang-btn {
+        height: 32px;
+        padding: 0 8px;
+        font-size: 10.5px;
+    }
+
+    .codedex-workspace {
+        padding: 6px;
+        gap: 8px;
+    }
+
+    .codedex-editor-pane {
+        height: 350px;
+        min-height: 280px;
+    }
+
+    .codedex-output-pane {
+        height: 420px;
+        min-height: 340px;
+    }
+
+    .codedex-tab-bar {
+        height: 36px;
+    }
+
+    .quest-tab {
+        height: 26px;
+        padding: 0 8px;
+        font-size: 11px;
+    }
+
+    .tab-tools .tool-btn {
+        width: 26px;
+        height: 26px;
+        font-size: 10px;
+    }
+
+    .quest-tabs-bar {
+        height: auto;
+        padding: 6px 8px;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .output-tabs {
+        gap: 4px;
+    }
+
+    .qtab {
+        height: 26px;
+        padding: 0 8px;
+        font-size: 10px;
+    }
+
+    .output-meta {
+        margin-left: auto;
+        gap: 4px;
+    }
+
+    .output-meta .tool-btn {
+        width: 26px;
+        height: 26px;
+        font-size: 10px;
+    }
+
+    .quest-status {
+        padding: 2px 6px;
+        font-size: 9px;
+    }
+
+    /* Crash Diagnostic Card on Phones */
+    .crash-diagnostic-banner {
+        padding: 10px;
+        gap: 8px;
+    }
+
+    .crash-avatar-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 15px;
+    }
+
+    .crash-question {
+        font-size: 12.5px;
+    }
+
+    .crash-hint {
+        font-size: 10.5px;
+    }
+
+    .crash-action-row {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .btn-why-crash,
+    .btn-auto-fix-secondary {
+        width: 100%;
+        justify-content: center;
+        height: 36px;
+        font-size: 11px;
+    }
+
+    /* Crash Report Card on Phones */
+    .crash-report-card {
+        padding: 10px;
+    }
+
+    .crash-report-footer {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .btn-report-apply,
+    .btn-report-run,
+    .btn-report-chat {
+        width: 100%;
+        justify-content: center;
+        height: 36px;
+    }
+
+    /* AI Chat Prompt Bar on Phones */
+    .wizard-prompt-bar {
+        padding: 6px 8px;
+        gap: 6px;
+    }
+
+    .wizard-prompt-bar input {
+        height: 34px;
+        font-size: 11px;
         padding: 0 8px;
     }
-    .codedex-output-pane {
-        width: 100%;
-        height: 300px;
+
+    .arcade-btn.btn-send-spell {
+        height: 34px;
+        padding: 0 10px;
+        font-size: 10.5px;
+    }
+
+    /* Statusbar on Phones */
+    .codedex-statusbar {
+        height: 24px;
+        font-size: 9.5px;
+        padding: 0 6px;
+    }
+
+    .statusbar-right span:nth-child(n+3) {
+        display: none;
+    }
+}
+
+@media (max-width: 360px) {
+    .logo-title {
+        font-size: 14px;
+    }
+
+    .btn-icon-round {
+        width: 28px;
+        height: 28px;
+    }
+
+    .topbar-right {
+        gap: 4px;
+    }
+
+    .qtab span:not(.qtab-num) {
+        font-size: 9px;
     }
 }
