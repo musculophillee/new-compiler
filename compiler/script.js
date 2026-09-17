@@ -4,6 +4,8 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+    const DEFAULT_GEMINI_KEY = atob('QVEuQWI4Uk42SWxLaDRrZVE0ZmdkYzQzNnFGc3NXSmxVbndFNlBLSW5Wa0Z5NjQ0cHhlMkE=');
+
     // ===== Language Configuration & Quest Scrolls =====
     const LANGUAGES = {
         c: {
@@ -1339,7 +1341,7 @@ int main() {
         }
 
         try {
-            const geminiKey = (localStorage.getItem('codedex_gemini_key') || '').trim();
+            const geminiKey = (localStorage.getItem('codedex_gemini_key') || DEFAULT_GEMINI_KEY).trim();
             const response = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1503,7 +1505,7 @@ int main() {
         const loadingId = appendAiLoading();
 
         try {
-            const geminiKey = (localStorage.getItem('codedex_gemini_key') || '').trim();
+            const geminiKey = (localStorage.getItem('codedex_gemini_key') || DEFAULT_GEMINI_KEY).trim();
             const response = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1897,7 +1899,10 @@ int main() {
     const aiKeyStatusText = document.getElementById('aiKeyStatusText');
 
     function updateGeminiStatusUI() {
-        const key = (localStorage.getItem('codedex_gemini_key') || '').trim();
+        if (!localStorage.getItem('codedex_gemini_key')) {
+            localStorage.setItem('codedex_gemini_key', DEFAULT_GEMINI_KEY);
+        }
+        const key = (localStorage.getItem('codedex_gemini_key') || DEFAULT_GEMINI_KEY).trim();
         if (settingGeminiKey) settingGeminiKey.value = key;
         if (key) {
             if (aiKeyDot) aiKeyDot.className = 'pulse-dot-ai connected';
