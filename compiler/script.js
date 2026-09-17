@@ -904,8 +904,18 @@ int main() {
         updateLanguageDisplay(currentLang);
         displayPreloadedHelloWorld(currentLang);
 
-        window.addEventListener('resize', () => {
+        const handleLayoutUpdate = () => {
+            if (window.innerWidth <= 1024 && window.matchMedia('(orientation: portrait)').matches) {
+                if (editorPane) editorPane.style.flex = '';
+                if (outputPane) outputPane.style.flex = '';
+            }
             if (editor) editor.layout();
+        };
+
+        window.addEventListener('resize', handleLayoutUpdate);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(handleLayoutUpdate, 150);
+            setTimeout(handleLayoutUpdate, 400);
         });
     });
 
@@ -1793,31 +1803,32 @@ int main() {
         if (el) el.remove();
     }
 
-    // ===== Resizer Splitter =====
+    // ===== Resizer Splitter (Mouse + Touch for Tablets/iPads) =====
     let isDragging = false;
 
-    paneResizer.addEventListener('mousedown', () => {
+    function startDrag() {
         isDragging = true;
         paneResizer.classList.add('dragging');
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
-    });
+    }
 
-    document.addEventListener('mousemove', (e) => {
+    function doDrag(clientX) {
         if (!isDragging) return;
         const workspaceRect = document.querySelector('.codedex-workspace').getBoundingClientRect();
-        const offsetLeft = e.clientX - workspaceRect.left - 58;
+        const offsetLeft = clientX - workspaceRect.left - 58;
         const totalWidth = workspaceRect.width - 58;
+        if (totalWidth <= 0) return;
         const pct = (offsetLeft / totalWidth) * 100;
 
-        if (pct >= 25 && pct <= 75) {
+        if (pct >= 20 && pct <= 80) {
             editorPane.style.flex = `0 0 ${pct}%`;
             outputPane.style.flex = `0 0 ${100 - pct}%`;
             if (editor) editor.layout();
         }
-    });
+    }
 
-    document.addEventListener('mouseup', () => {
+    function stopDrag() {
         if (isDragging) {
             isDragging = false;
             paneResizer.classList.remove('dragging');
@@ -1825,7 +1836,26 @@ int main() {
             document.body.style.userSelect = '';
             if (editor) editor.layout();
         }
-    });
+    }
+
+    paneResizer.addEventListener('mousedown', startDrag);
+    document.addEventListener('mousemove', (e) => doDrag(e.clientX));
+    document.addEventListener('mouseup', stopDrag);
+
+    paneResizer.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length > 0) {
+            startDrag();
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (isDragging && e.touches && e.touches.length > 0) {
+            doDrag(e.touches[0].clientX);
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', stopDrag);
+    document.addEventListener('touchcancel', stopDrag);
 
     // ===== Side Drawer (Code Snippets) =====
     const actSnippets = document.getElementById('actSnippets');

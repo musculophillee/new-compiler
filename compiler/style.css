@@ -1909,28 +1909,50 @@ html, body {
    10. RESPONSIVE (TABLETS & PHONES)
    ========================================================================== */
 
-@media (max-width: 1024px) {
-    .codedex-workspace {
-        padding: 10px;
-        gap: 10px;
+@media (max-width: 1200px) {
+    .key-hint {
+        display: none !important;
     }
+
+    .codedex-topbar {
+        padding: 0 12px;
+        gap: 8px;
+    }
+
+    .arcade-btn.btn-run-quest,
+    .arcade-btn.btn-duck-ai,
+    .arcade-btn.btn-mini,
+    .lang-btn {
+        height: 34px;
+        padding: 0 10px;
+        font-size: 11.5px;
+    }
+
+    .codedex-editor-pane {
+        flex: 1 1 58%;
+        min-width: 360px;
+    }
+
     .codedex-output-pane {
-        width: 380px;
-        min-width: 320px;
+        width: 42%;
+        min-width: 340px;
     }
 }
 
-@media (max-width: 768px) {
+/* ===== TABLETS & IPADS (PORTRAIT & UNIVERSAL) ===== */
+@media (max-width: 1024px) {
     html, body {
         height: auto;
         min-height: 100%;
         overflow-x: hidden;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .codedex-app {
         height: auto;
         min-height: 100vh;
+        min-height: 100dvh;
         overflow-x: hidden;
         overflow-y: visible;
     }
@@ -1938,17 +1960,18 @@ html, body {
     .codedex-topbar {
         height: auto;
         min-height: 52px;
-        padding: 8px 12px;
+        padding: 10px 14px;
         flex-wrap: wrap;
-        gap: 8px 12px;
+        gap: 10px 14px;
     }
 
     .topbar-left {
-        flex: 1;
+        flex: 1 0 auto;
     }
 
     .topbar-right {
-        gap: 6px;
+        gap: 8px;
+        flex: 0 0 auto;
     }
 
     .topbar-center {
@@ -1956,7 +1979,8 @@ html, body {
         width: 100%;
         display: flex;
         align-items: center;
-        gap: 6px;
+        justify-content: flex-start;
+        gap: 8px;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         padding-bottom: 2px;
@@ -1973,47 +1997,49 @@ html, body {
 
     .btn-run-quest {
         flex-shrink: 0;
-        height: 34px;
-        padding: 0 12px;
+        height: 36px;
+        padding: 0 14px;
+        font-size: 12px;
     }
 
     .btn-duck-ai,
     .arcade-btn.btn-mini {
         flex-shrink: 0;
-        height: 34px;
-        padding: 0 10px;
-        font-size: 11px;
+        height: 36px;
+        padding: 0 12px;
+        font-size: 11.5px;
     }
 
     .lang-btn {
         flex-shrink: 0;
-        height: 34px;
-        padding: 0 10px;
-        font-size: 11px;
+        height: 36px;
+        padding: 0 12px;
+        font-size: 11.5px;
     }
 
-    /* Workspace Vertical Stack */
+    /* Workspace Vertical Stack on Tablets/iPads in Portrait */
     .codedex-workspace {
         flex-direction: column;
         height: auto;
         min-height: auto;
-        padding: 8px 10px;
-        gap: 10px;
+        padding: 12px 14px;
+        gap: 14px;
         overflow: visible;
     }
 
     .quest-activity-dock {
         width: 100%;
-        height: 40px;
+        height: 44px;
         flex-direction: row;
         justify-content: center;
-        padding: 0 8px;
-        gap: 12px;
+        padding: 0 10px;
+        gap: 14px;
     }
 
     .dock-item {
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
+        font-size: 13px;
     }
 
     .dock-spacer {
@@ -2027,35 +2053,35 @@ html, body {
     .codedex-editor-pane {
         flex: none !important;
         width: 100% !important;
-        height: 400px;
-        min-height: 320px;
+        height: 520px;
+        min-height: 400px;
         box-shadow: var(--shadow-pixel-sm);
     }
 
     .codedex-output-pane {
         flex: none !important;
         width: 100% !important;
-        height: 440px;
-        min-height: 360px;
+        height: 480px;
+        min-height: 380px;
         box-shadow: var(--shadow-pixel-sm);
     }
 
-    /* Modals & Drawers on Mobile */
+    /* Modals & Drawers on Tablets */
     .quest-drawer {
         position: fixed;
         top: 0;
         right: 0;
         bottom: 0;
-        width: 85%;
-        max-width: 320px;
+        width: 380px;
+        max-width: 85vw;
         z-index: 1000;
         height: 100%;
     }
 
     .quest-modal {
-        width: 94% !important;
-        max-width: 480px !important;
-        margin: 20px auto;
+        width: 92% !important;
+        max-width: 580px !important;
+        margin: 24px auto;
         max-height: 88vh;
     }
 
@@ -2063,6 +2089,155 @@ html, body {
         max-width: 90vw;
         max-height: 65vh;
         overflow-y: auto;
+    }
+}
+
+/* ===== TABLETS & IPADS IN LANDSCAPE MODE (SIDE-BY-SIDE IDE) ===== */
+@media (min-width: 900px) and (max-width: 1200px) and (orientation: landscape) {
+    html, body {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .codedex-app {
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    .codedex-topbar {
+        height: var(--topbar-height);
+        min-height: 48px;
+        padding: 0 12px;
+        flex-wrap: nowrap;
+        gap: 8px;
+    }
+
+    .topbar-left {
+        flex: 0 0 auto;
+    }
+
+    .logo-title {
+        font-size: 16px;
+    }
+
+    .topbar-center {
+        order: 2;
+        width: auto;
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        overflow-x: visible;
+        padding: 0;
+    }
+
+    .topbar-center .arcade-btn,
+    .topbar-center .lang-btn {
+        height: 32px;
+        padding: 0 9px;
+        font-size: 11px;
+    }
+
+    .key-hint {
+        display: none !important;
+    }
+
+    .topbar-right {
+        flex: 0 0 auto;
+        gap: 6px;
+    }
+
+    .btn-icon-round {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
+
+    .codedex-workspace {
+        flex-direction: row;
+        height: calc(100vh - var(--topbar-height) - var(--statusbar-height));
+        height: calc(100dvh - var(--topbar-height) - var(--statusbar-height));
+        overflow: hidden;
+        padding: 8px 10px;
+        gap: 8px;
+    }
+
+    .quest-activity-dock {
+        width: 44px;
+        height: 100%;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding: 8px 0;
+        gap: 8px;
+    }
+
+    .dock-spacer {
+        display: block;
+        flex: 1;
+    }
+
+    .codedex-resizer {
+        display: block !important;
+        width: 12px;
+        margin: 0 -2px;
+        cursor: col-resize;
+    }
+
+    .codedex-editor-pane {
+        flex: 1 1 56% !important;
+        width: auto !important;
+        height: 100% !important;
+        min-height: auto;
+    }
+
+    .codedex-output-pane {
+        flex: 0 0 44% !important;
+        width: 44% !important;
+        min-width: 340px !important;
+        height: 100% !important;
+        min-height: auto;
+    }
+}
+
+/* ===== SMALL TABLETS & LARGE PHONES ===== */
+@media (max-width: 768px) {
+    .codedex-workspace {
+        padding: 8px 10px;
+        gap: 10px;
+    }
+
+    .quest-activity-dock {
+        height: 40px;
+        gap: 12px;
+    }
+
+    .dock-item {
+        width: 32px;
+        height: 32px;
+    }
+
+    .codedex-editor-pane {
+        height: 420px;
+        min-height: 320px;
+    }
+
+    .codedex-output-pane {
+        height: 440px;
+        min-height: 360px;
+    }
+
+    .btn-run-quest {
+        height: 34px;
+        padding: 0 12px;
+    }
+
+    .btn-duck-ai,
+    .arcade-btn.btn-mini,
+    .lang-btn {
+        height: 34px;
+        padding: 0 10px;
+        font-size: 11px;
     }
 }
 
