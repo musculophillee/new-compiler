@@ -297,13 +297,13 @@
                     <!-- 3. AI Assistant View -->
                     <div class="quest-panel" id="viewAi">
                         <div class="duck-ai-container">
-                            <!-- Gemini Cloud AI Status Banner -->
+                            <!-- Cloud AI Status Banner -->
                             <div class="ai-key-status-bar" id="aiKeyStatusBar">
                                 <div class="ai-key-badge">
                                     <span class="pulse-dot-ai" id="aiKeyDot"></span>
-                                    <span id="aiKeyStatusText">Local AI Active (Add Gemini API Key for Ultra Mode)</span>
+                                    <span id="aiKeyStatusText">Local AI Active (Add API Key for Cloud Intelligence)</span>
                                 </div>
-                                <button class="btn-config-key" id="btnConfigKey" title="Configure Gemini API Key">
+                                <button class="btn-config-key" id="btnConfigKey" title="Configure AI API Key">
                                     <i class="fa-solid fa-key"></i> <span id="btnConfigKeyText">Set Key</span>
                                 </button>
                             </div>
@@ -420,20 +420,20 @@
                     </label>
                 </div>
 
-                <div class="setting-section-title">✨ GOOGLE GEMINI AI KEY</div>
+                <div class="setting-section-title">✨ CLOUD AI API KEY</div>
                 <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
                     <div>
-                        <strong>Google Gemini API Key</strong>
+                        <strong>Cloud AI API Key</strong>
                         <p>Powers 1-click Auto-Fix, compiler debugging, algorithmic code writing, and live chat.</p>
                     </div>
                     <div style="display: flex; gap: 8px; width: 100%; margin-top: 4px;">
-                        <input type="password" id="settingGeminiKey" class="retro-input" placeholder="Paste Gemini API Key (e.g. AIzaSy...)" style="flex: 1; padding: 7px 10px;">
+                        <input type="password" id="settingAiKey" class="retro-input" placeholder="Paste AI API Key (e.g. AIzaSy...)" style="flex: 1; padding: 7px 10px;">
                         <button class="arcade-btn" id="btnToggleKeyVis" title="Show/Hide Key" style="padding: 7px 12px;"><i class="fa-solid fa-eye" id="eyeKeyIcon"></i></button>
-                        <button class="arcade-btn" id="btnSaveGeminiKey" style="background: var(--color-green); color: #fff; padding: 7px 14px; font-weight: 700;">SAVE</button>
+                        <button class="arcade-btn" id="btnSaveAiKey" style="background: var(--color-green); color: #fff; padding: 7px 14px; font-weight: 700;">SAVE</button>
                     </div>
                     <div style="font-size: 11.5px; margin-top: 4px;">
                         <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="color: var(--color-cyan); text-decoration: underline; display: inline-flex; align-items: center; gap: 5px;">
-                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Get free Gemini API Key from Google AI Studio
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Get free AI API Key
                         </a>
                     </div>
                 </div>
@@ -465,6 +465,6 @@
     <!-- Toast Banner -->
     <div class="retro-toast" id="toast"></div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=3.1.0"></script>
 </body>
 </html>

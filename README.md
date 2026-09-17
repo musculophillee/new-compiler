@@ -1,6 +1,6 @@
 # 🦆 Codédex Online Compiler & Cloud IDE
 
-An aesthetic, retro-themed online compiler and cloud IDE inspired by **Codédex**, featuring Monaco Editor, multi-language execution, 8-bit sound effects, pixel-art themes, and **Google Gemini AI** integration.
+An aesthetic, retro-themed online compiler and cloud IDE inspired by **Codédex**, featuring Monaco Editor, multi-language execution, 8-bit sound effects, pixel-art themes, and **Cloud AI Agent** integration.
 
 ![Codédex IDE](compiler/assets/duck.jpg)
 
@@ -10,10 +10,10 @@ An aesthetic, retro-themed online compiler and cloud IDE inspired by **Codédex*
 
 - **Multi-Language Execution**: Run C (GCC), C++ (G++), Python 3.11, JavaScript, TypeScript, Java 21, and Go locally with stdin support.
 - **Monaco Editor**: VS Code-grade editing experience with syntax highlighting, autocomplete, code minimap, and auto-formatting.
-- **🤖 Gemini AI Integration**:
+- **🤖 Cloud AI Agent Integration**:
   - **1-Click Auto-Fix**: Diagnoses and repairs crashed or broken code directly in the editor.
   - **AI Assistant**: Explain code, optimize time & space complexity, add documentation comments, and audit security.
-  - Seamlessly powered by **Google Gemini 1.5 Flash** with offline fallback.
+  - Seamlessly powered by fast Cloud AI with offline fallback.
 - **🎨 Aesthetic Pixel Themes**:
   - 🌌 *Celeste Dusk*
   - 🌲 *Stardew Moss*
@@ -51,9 +51,9 @@ http://localhost:4000
 
 ---
 
-## 🔑 Adding Google Gemini AI Key
+## 🔑 Adding Cloud AI Key
 1. Click the **✨ AI Assistant** tab in the right pane, or open **Settings (⚙️)** in the top right.
-2. Enter your **Google Gemini API Key** from [Google AI Studio](https://aistudio.google.com/app/apikey).
+2. Enter your **Cloud AI API Key**.
 3. Click **SAVE** — the status indicator will turn green and enable real-time cloud intelligence!
 
 ---

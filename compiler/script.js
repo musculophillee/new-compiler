@@ -1329,7 +1329,7 @@ int main() {
                         <div class="crash-avatar-icon"><i class="fa-solid fa-burst"></i></div>
                         <div class="crash-intro-text">
                             <div class="crash-question">Why did my code crash?</div>
-                            <p class="crash-hint">${errLineNum ? 'Failure detected near line ' + errLineNum + '. ' : ''}Click below to have Gemini AI explain the exact cause of this crash, breakdown what's wrong, and synthesize the fix.</p>
+                            <p class="crash-hint">${errLineNum ? 'Failure detected near line ' + errLineNum + '. ' : ''}Click below to have the AI Agent explain the exact cause of this crash, breakdown what's wrong, and synthesize the fix.</p>
                         </div>
                     </div>
                     <div class="crash-action-row" id="crashActionRow">
@@ -1369,7 +1369,7 @@ int main() {
     async function diagnoseCrashAndFix(errorText = '', crashCard = null, autoApply = false) {
         if (!editor) return;
         playSound('run');
-        showToast('Gemini AI is diagnosing why your code crashed...');
+        showToast(autoApply ? 'AI Agent is auto-repairing your code...' : 'AI Agent is diagnosing why your code crashed...');
 
         let btnWhyCrash = null;
         let btnAutoFixQuick = null;
@@ -1391,7 +1391,7 @@ int main() {
         const timeoutId = setTimeout(() => controller.abort(), 9500);
 
         try {
-            const geminiKey = (localStorage.getItem('codedex_gemini_key') || DEFAULT_GEMINI_KEY).trim();
+            const aiApiKey = (localStorage.getItem('codedex_ai_key') || localStorage.getItem('codedex_gemini_key') || DEFAULT_GEMINI_KEY).trim();
             const response = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1401,7 +1401,7 @@ int main() {
                     language: currentLang,
                     code: editor.getValue(),
                     error: errorText || consoleBody.textContent,
-                    apiKey: geminiKey
+                    apiKey: aiApiKey
                 })
             });
             clearTimeout(timeoutId);
@@ -1434,7 +1434,7 @@ int main() {
                         <div class="crash-report-card">
                             <div class="crash-report-header">
                                 <div class="crash-report-title">
-                                    <i class="fa-solid fa-robot"></i> GEMINI AI CRASH REPORT
+                                    <i class="fa-solid fa-robot"></i> AI AGENT CRASH REPORT
                                 </div>
                                 <span class="crash-status-pill">● ROOT CAUSE IDENTIFIED</span>
                             </div>
@@ -1665,7 +1665,7 @@ int main() {
         const loadingId = appendAiLoading();
 
         try {
-            const geminiKey = (localStorage.getItem('codedex_gemini_key') || DEFAULT_GEMINI_KEY).trim();
+            const aiApiKey = (localStorage.getItem('codedex_ai_key') || localStorage.getItem('codedex_gemini_key') || DEFAULT_GEMINI_KEY).trim();
             const response = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1675,7 +1675,7 @@ int main() {
                     code: editor.getValue(),
                     prompt: prompt,
                     error: consoleBody.textContent.includes('Error') ? consoleBody.textContent : '',
-                    apiKey: geminiKey
+                    apiKey: aiApiKey
                 })
             });
 
@@ -2068,9 +2068,9 @@ int main() {
         if (editor) editor.updateOptions({ wordWrap: settingWordWrap.checked ? 'on' : 'off' });
     });
 
-    // ===== Google Gemini API Key Settings & Status =====
-    const settingGeminiKey = document.getElementById('settingGeminiKey');
-    const btnSaveGeminiKey = document.getElementById('btnSaveGeminiKey');
+    // ===== Cloud AI API Key Settings & Status =====
+    const settingGeminiKey = document.getElementById('settingAiKey') || document.getElementById('settingGeminiKey');
+    const btnSaveGeminiKey = document.getElementById('btnSaveAiKey') || document.getElementById('btnSaveGeminiKey');
     const btnToggleKeyVis = document.getElementById('btnToggleKeyVis');
     const eyeKeyIcon = document.getElementById('eyeKeyIcon');
     const btnConfigKey = document.getElementById('btnConfigKey');
@@ -2079,18 +2079,18 @@ int main() {
     const aiKeyStatusText = document.getElementById('aiKeyStatusText');
 
     function updateGeminiStatusUI() {
-        if (!localStorage.getItem('codedex_gemini_key')) {
-            localStorage.setItem('codedex_gemini_key', DEFAULT_GEMINI_KEY);
+        if (!localStorage.getItem('codedex_ai_key') && !localStorage.getItem('codedex_gemini_key')) {
+            localStorage.setItem('codedex_ai_key', DEFAULT_GEMINI_KEY);
         }
-        const key = (localStorage.getItem('codedex_gemini_key') || DEFAULT_GEMINI_KEY).trim();
+        const key = (localStorage.getItem('codedex_ai_key') || localStorage.getItem('codedex_gemini_key') || DEFAULT_GEMINI_KEY).trim();
         if (settingGeminiKey) settingGeminiKey.value = key;
         if (key) {
             if (aiKeyDot) aiKeyDot.className = 'pulse-dot-ai connected';
-            if (aiKeyStatusText) aiKeyStatusText.textContent = '✨ Gemini AI Connected (Cloud Intelligence)';
+            if (aiKeyStatusText) aiKeyStatusText.textContent = '✨ Cloud AI Connected';
             if (btnConfigKeyText) btnConfigKeyText.textContent = 'Manage Key';
         } else {
             if (aiKeyDot) aiKeyDot.className = 'pulse-dot-ai';
-            if (aiKeyStatusText) aiKeyStatusText.textContent = '⚡ Local AI (Add Gemini Key for Ultra Mode)';
+            if (aiKeyStatusText) aiKeyStatusText.textContent = '⚡ Local AI (Add API Key for Cloud Intelligence)';
             if (btnConfigKeyText) btnConfigKeyText.textContent = 'Add Key';
         }
     }
@@ -2098,10 +2098,11 @@ int main() {
     if (btnSaveGeminiKey) {
         btnSaveGeminiKey.addEventListener('click', () => {
             const val = (settingGeminiKey.value || '').trim();
+            localStorage.setItem('codedex_ai_key', val);
             localStorage.setItem('codedex_gemini_key', val);
             updateGeminiStatusUI();
             playSound('success');
-            showToast(val ? 'Gemini API Key Saved! 🔑' : 'Gemini API Key Removed');
+            showToast(val ? 'AI API Key Saved! 🔑' : 'AI API Key Removed');
         });
     }
 
