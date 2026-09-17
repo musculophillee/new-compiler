@@ -1058,6 +1058,347 @@ html, body {
     font-style: italic;
 }
 
+/* 7.1.1 Crash Diagnostic & Why Did My Code Crash Engine */
+.crash-diagnostic-banner {
+    margin-top: 14px;
+    background: var(--color-bg-elevated);
+    border: 2px solid var(--color-border);
+    box-shadow: 4px 4px 0px var(--color-border);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.crash-diagnostic-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 8px;
+    border-bottom: 1.5px dashed var(--color-border-subtle);
+}
+
+.crash-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ff3366;
+    color: #ffffff;
+    font-family: var(--font-display);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border: 1.5px solid var(--color-border);
+    box-shadow: 2px 2px 0px var(--color-border);
+}
+
+.crash-exit-code {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-console-meta);
+}
+
+.crash-diagnostic-intro {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.crash-avatar-icon {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    border: 2px solid var(--color-border);
+    box-shadow: 2px 2px 0px var(--color-border);
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.crash-intro-text {
+    flex: 1;
+}
+
+.crash-question {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--color-fg-main);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+}
+
+.crash-hint {
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--color-fg-muted);
+    margin: 0;
+}
+
+.crash-action-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.btn-why-crash {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 16px;
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    border: 2px solid var(--color-border);
+    box-shadow: 3px 3px 0px var(--color-border);
+    font-family: var(--font-display);
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.btn-why-crash:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px var(--color-border);
+}
+
+.btn-why-crash:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px var(--color-border);
+}
+
+.btn-auto-fix-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    background: var(--color-bg-surface);
+    color: var(--color-fg-main);
+    border: 2px solid var(--color-border);
+    box-shadow: 2px 2px 0px var(--color-border);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.btn-auto-fix-secondary:hover {
+    background: var(--color-bg-hover);
+}
+
+/* Crash Report Result Card */
+.crash-report-card {
+    margin-top: 10px;
+    background: var(--color-bg-surface);
+    border: 2px solid var(--color-border);
+    box-shadow: 3px 3px 0px var(--color-border);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.crash-report-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 8px;
+    border-bottom: 1.5px solid var(--color-border);
+}
+
+.crash-report-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--color-fg-main);
+}
+
+.crash-status-pill {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid #10b981;
+    padding: 2px 6px;
+}
+
+.crash-report-body {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-fg-main);
+}
+
+.diag-h3, .diag-h4 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    text-transform: uppercase;
+    margin: 12px 0 6px 0;
+    color: var(--color-fg-main);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.diag-h4 {
+    font-size: 12px;
+    border-left: 3px solid var(--color-accent);
+    padding-left: 8px;
+}
+
+.diag-li {
+    margin: 4px 0 4px 16px;
+    list-style-type: square;
+}
+
+.inline-diag-code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: rgba(21, 21, 21, 0.08);
+    border: 1px solid var(--color-border-subtle);
+    padding: 1px 4px;
+    font-weight: 600;
+}
+
+.chat-code-card {
+    margin: 10px 0;
+    background: #151515;
+    border: 2px solid var(--color-border);
+    box-shadow: 3px 3px 0px var(--color-border);
+    overflow: hidden;
+}
+
+.chat-code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #222222;
+    padding: 6px 10px;
+    border-bottom: 1px solid #333333;
+}
+
+.chat-code-lang {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-run);
+    text-transform: uppercase;
+}
+
+.chat-code-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.chat-code-btn {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    background: #333333;
+    color: #ffffff;
+    border: 1px solid #555555;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.chat-code-btn:hover {
+    background: var(--color-run);
+    color: #151515;
+    border-color: #151515;
+}
+
+.chat-code-body {
+    padding: 10px;
+    margin: 0;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: #f5f2ea;
+}
+
+.crash-report-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1.5px dashed var(--color-border-subtle);
+}
+
+.btn-report-apply {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    border: 2px solid var(--color-border);
+    box-shadow: 2px 2px 0px var(--color-border);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.btn-report-run {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    background: var(--color-fg-main);
+    color: var(--color-bg-main);
+    border: 2px solid var(--color-border);
+    box-shadow: 2px 2px 0px var(--color-border);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.btn-report-chat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    background: var(--color-bg-elevated);
+    color: var(--color-fg-main);
+    border: 2px solid var(--color-border);
+    box-shadow: 2px 2px 0px var(--color-border);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
 /* 7.2 Stdin View */
 .backpack-container {
     flex: 1;

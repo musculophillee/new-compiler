@@ -1295,28 +1295,45 @@ int main() {
                     }
                 }
 
-                // Render Interactive Auto-Fix Banner in Console
-                const fixBanner = document.createElement('div');
-                fixBanner.className = 'auto-fix-banner';
-                fixBanner.innerHTML = `
-                    <div class="auto-fix-info">
-                        <div class="auto-fix-duck" style="font-size: 22px; display:flex; align-items:center; justify-content:center; width:44px; height:44px; background:rgba(255,209,102,0.15); border-radius:8px; color:var(--color-yellow);">
-                            <i class="fa-solid fa-wrench"></i>
-                        </div>
-                        <div class="auto-fix-text">
-                            <strong>⚡ AI AUTO-FIX AVAILABLE</strong>
-                            <p>${errLineNum ? 'Detected error on line ' + errLineNum + ': <code>' + escapeHtml(errMsgText) + '</code>. ' : ''}Click below to automatically repair and verify your code.</p>
+                // Render Interactive "Why did my code crash?" Neo-Brutalist Banner in Console
+                const crashBanner = document.createElement('div');
+                crashBanner.className = 'crash-diagnostic-banner';
+                crashBanner.innerHTML = `
+                    <div class="crash-diagnostic-header">
+                        <div class="crash-badge"><i class="fa-solid fa-triangle-exclamation"></i> EXECUTION CRASH DETECTED</div>
+                        <span class="crash-exit-code">[ ${LANGUAGES[currentLang].name.toUpperCase()} // EXIT: ${data.exitCode !== undefined ? data.exitCode : 1} ]</span>
+                    </div>
+                    <div class="crash-diagnostic-intro">
+                        <div class="crash-avatar-icon"><i class="fa-solid fa-burst"></i></div>
+                        <div class="crash-intro-text">
+                            <div class="crash-question">Why did my code crash?</div>
+                            <p class="crash-hint">${errLineNum ? 'Failure detected near line ' + errLineNum + '. ' : ''}Click below to have Gemini AI explain the exact cause of this crash, breakdown what's wrong, and synthesize the fix.</p>
                         </div>
                     </div>
-                    <button class="btn-auto-fix-action" id="btnAutoFixBanner">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span>1-CLICK AUTO-FIX CODE</span>
-                    </button>
+                    <div class="crash-action-row" id="crashActionRow">
+                        <button class="btn-why-crash" id="btnWhyCrash">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <span>WHY DID MY CODE CRASH?</span>
+                        </button>
+                        <button class="btn-auto-fix-secondary" id="btnAutoFixQuick">
+                            <i class="fa-solid fa-bolt"></i>
+                            <span>1-CLICK AUTO-FIX</span>
+                        </button>
+                    </div>
+                    <div class="crash-diagnosis-container" id="crashDiagContainer" style="display:none;"></div>
                 `;
-                consoleBody.appendChild(fixBanner);
+                consoleBody.appendChild(crashBanner);
 
-                const btnFix = fixBanner.querySelector('#btnAutoFixBanner');
-                btnFix.addEventListener('click', () => autoFixCode(data.stderr, fixBanner));
+                const btnWhyCrash = crashBanner.querySelector('#btnWhyCrash');
+                const btnAutoFixQuick = crashBanner.querySelector('#btnAutoFixQuick');
+
+                btnWhyCrash.addEventListener('click', () => {
+                    diagnoseCrashAndFix(data.stderr || consoleBody.textContent, crashBanner, false);
+                });
+
+                btnAutoFixQuick.addEventListener('click', () => {
+                    diagnoseCrashAndFix(data.stderr || consoleBody.textContent, crashBanner, true);
+                });
             }
         }
 
@@ -1326,18 +1343,26 @@ int main() {
         }
     }
 
-    // ===== 1-Click Auto-Fix Engine =====
-    async function autoFixCode(errorText = '', targetBanner = null) {
+    // ===== Crash Diagnosis & Root Cause Breakdown Engine =====
+    async function diagnoseCrashAndFix(errorText = '', crashCard = null, autoApply = false) {
         if (!editor) return;
         playSound('run');
-        showToast('AI is repairing your code...');
+        showToast('Gemini AI is diagnosing why your code crashed...');
 
-        if (targetBanner) {
-            const btn = targetBanner.querySelector('#btnAutoFixBanner');
-            if (btn) {
-                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>REPAIRING...</span>`;
-                btn.style.pointerEvents = 'none';
+        let btnWhyCrash = null;
+        let btnAutoFixQuick = null;
+        let crashDiagContainer = null;
+
+        if (crashCard) {
+            btnWhyCrash = crashCard.querySelector('#btnWhyCrash');
+            btnAutoFixQuick = crashCard.querySelector('#btnAutoFixQuick');
+            crashDiagContainer = crashCard.querySelector('#crashDiagContainer');
+
+            if (btnWhyCrash) {
+                btnWhyCrash.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>DIAGNOSING ROOT CAUSE WITH GEMINI AI...</span>`;
+                btnWhyCrash.style.pointerEvents = 'none';
             }
+            if (btnAutoFixQuick) btnAutoFixQuick.style.pointerEvents = 'none';
         }
 
         try {
@@ -1346,7 +1371,7 @@ int main() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    action: 'debug',
+                    action: 'crash_analysis',
                     language: currentLang,
                     code: editor.getValue(),
                     error: errorText || consoleBody.textContent,
@@ -1357,64 +1382,169 @@ int main() {
             if (!response.ok) throw new Error('AI connection failed');
             const data = await response.json();
 
-            if (data.success && data.fixedCode) {
-                // Inscribe repaired code directly into Monaco Editor
-                editor.setValue(data.fixedCode);
-                monaco.editor.setModelMarkers(editor.getModel(), 'compiler', []);
-                playSound('success');
+            if (data.success) {
+                // Also record in AI Agent tab chat
+                appendAiMessage('user', 'Why did my code crash?');
+                appendAiMessage('assistant', data.response || data.explanation || 'Code analyzed.', data.fixedCode);
 
-                const issuesText = (data.issues && data.issues.length) ? data.issues.join(' ') : 'Repaired syntax and execution issues.';
+                if (autoApply && data.fixedCode) {
+                    editor.setValue(data.fixedCode);
+                    monaco.editor.setModelMarkers(editor.getModel(), 'compiler', []);
+                    playSound('success');
+                    showToast('Fixed code applied to editor! ✨');
+                }
 
-                if (targetBanner) {
-                    targetBanner.outerHTML = `
-                        <div class="fix-success-banner">
-                            <div>
-                                <strong>✨ CODE REPAIRED & VERIFIED!</strong>
-                                <p>${escapeHtml(issuesText)}</p>
+                if (crashCard && crashDiagContainer) {
+                    if (btnWhyCrash) {
+                        btnWhyCrash.innerHTML = `<i class="fa-solid fa-check"></i> <span>DIAGNOSIS COMPLETE</span>`;
+                        btnWhyCrash.style.background = '#10b981';
+                        btnWhyCrash.style.color = '#ffffff';
+                    }
+
+                    const rendered = renderCrashReportHtml(data.response || data.explanation || '');
+
+                    crashDiagContainer.innerHTML = `
+                        <div class="crash-report-card">
+                            <div class="crash-report-header">
+                                <div class="crash-report-title">
+                                    <i class="fa-solid fa-robot"></i> GEMINI AI CRASH REPORT
+                                </div>
+                                <span class="crash-status-pill">● ROOT CAUSE IDENTIFIED</span>
                             </div>
-                            <button class="btn-rerun-fixed" id="btnReRunFixed">
-                                <i class="fa-solid fa-play"></i>
-                                <span>RE-RUN CODE</span>
-                            </button>
+                            <div class="crash-report-body">
+                                ${rendered.html}
+                            </div>
+                            <div class="crash-report-footer">
+                                ${data.fixedCode ? `
+                                <button class="btn-report-apply" id="btnReportApply">
+                                    <i class="fa-solid fa-bolt"></i>
+                                    <span>${autoApply ? '✅ APPLIED TO EDITOR' : 'APPLY FIX TO EDITOR'}</span>
+                                </button>
+                                <button class="btn-report-run" id="btnReportRun">
+                                    <i class="fa-solid fa-play"></i>
+                                    <span>APPLY & RE-RUN CODE</span>
+                                </button>
+                                ` : ''}
+                                <button class="btn-report-chat" id="btnReportChat">
+                                    <i class="fa-solid fa-comments"></i>
+                                    <span>DISCUSS IN AI AGENT TAB</span>
+                                </button>
+                            </div>
                         </div>
                     `;
-                    const reRunBtn = consoleBody.querySelector('#btnReRunFixed');
-                    if (reRunBtn) reRunBtn.addEventListener('click', runCode);
-                }
+                    crashDiagContainer.style.display = 'block';
 
-                showToast('Code repaired and written to editor!');
-            } else {
-                if (targetBanner) {
-                    const btn = targetBanner.querySelector('#btnAutoFixBanner');
-                    if (btn) {
-                        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>ASK AI ASSISTANT</span>`;
-                        btn.style.pointerEvents = 'auto';
-                        btn.onclick = () => {
-                            document.querySelector('.qtab[data-pane="ai"]').click();
-                        };
+                    // Wire up buttons
+                    const applyBtn = crashDiagContainer.querySelector('#btnReportApply');
+                    if (applyBtn && data.fixedCode) {
+                        applyBtn.addEventListener('click', () => {
+                            editor.setValue(data.fixedCode);
+                            monaco.editor.setModelMarkers(editor.getModel(), 'compiler', []);
+                            playSound('success');
+                            showToast('Fixed code applied to Monaco Editor! ✨');
+                            applyBtn.innerHTML = `<i class="fa-solid fa-check"></i> <span>✅ APPLIED TO EDITOR</span>`;
+                        });
                     }
+
+                    const runBtn = crashDiagContainer.querySelector('#btnReportRun');
+                    if (runBtn && data.fixedCode) {
+                        runBtn.addEventListener('click', () => {
+                            editor.setValue(data.fixedCode);
+                            monaco.editor.setModelMarkers(editor.getModel(), 'compiler', []);
+                            runCode();
+                        });
+                    }
+
+                    const chatBtn = crashDiagContainer.querySelector('#btnReportChat');
+                    if (chatBtn) {
+                        chatBtn.addEventListener('click', () => {
+                            document.querySelector('.qtab[data-pane="ai"]').click();
+                        });
+                    }
+
+                    // Wire up code block copy/apply buttons in report
+                    crashDiagContainer.querySelectorAll('.copy-snippet-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const idx = parseInt(btn.getAttribute('data-code-idx'), 10);
+                            if (rendered.codeBlocks[idx]) {
+                                navigator.clipboard.writeText(rendered.codeBlocks[idx].code);
+                                playSound('click');
+                                showToast('Snippet copied to clipboard!');
+                            }
+                        });
+                    });
+
+                    crashDiagContainer.querySelectorAll('.apply-snippet-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const idx = parseInt(btn.getAttribute('data-code-idx'), 10);
+                            if (rendered.codeBlocks[idx]) {
+                                editor.setValue(rendered.codeBlocks[idx].code);
+                                monaco.editor.setModelMarkers(editor.getModel(), 'compiler', []);
+                                playSound('success');
+                                showToast('Snippet applied to editor!');
+                            }
+                        });
+                    });
+
+                    crashDiagContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
-                const reason = data.response || (data.issues && data.issues.length ? data.issues.join(' ') : 'Could not automatically repair code.');
-                showToast(reason);
+            } else {
+                showToast(data.response || 'Could not analyze crash.');
+                if (btnWhyCrash) {
+                    btnWhyCrash.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>WHY DID MY CODE CRASH?</span>`;
+                    btnWhyCrash.style.pointerEvents = 'auto';
+                }
             }
         } catch (err) {
-            if (targetBanner) {
-                const btn = targetBanner.querySelector('#btnAutoFixBanner');
-                if (btn) {
-                    btn.innerHTML = `<i class="fa-solid fa-wrench"></i> <span>AUTO-FIX</span>`;
-                    btn.style.pointerEvents = 'auto';
-                }
+            showToast('Crash analysis error: ' + err.message);
+            if (btnWhyCrash) {
+                btnWhyCrash.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>RETRY CRASH ANALYSIS</span>`;
+                btnWhyCrash.style.pointerEvents = 'auto';
             }
-            showToast('Auto-Fix error: ' + err.message);
         }
+    }
+
+    function renderCrashReportHtml(text) {
+        const codeBlocks = [];
+        let parsedText = text.replace(/```([a-zA-Z0-9_#+-]*)\n?([\s\S]*?)```/g, (match, lang, blockContent) => {
+            const idx = codeBlocks.length;
+            codeBlocks.push({ lang: lang || currentLang, code: blockContent.trim() });
+            return `__CODE_BLOCK_${idx}__`;
+        });
+
+        let formatted = escapeHtml(parsedText)
+            .replace(/###\s*(.*?)(?:<br>|\n|$)/g, '<h4 class="diag-h4">$1</h4>')
+            .replace(/##\s*(.*?)(?:<br>|\n|$)/g, '<h3 class="diag-h3">$1</h3>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\* (.*?)(?:<br>|\n|$)/g, '<li class="diag-li">$1</li>')
+            .replace(/`([^`]+)`/g, '<code class="inline-diag-code">$1</code>')
+            .replace(/\n/g, '<br>');
+
+        codeBlocks.forEach((cb, idx) => {
+            const blockHtml = `
+                <div class="chat-code-card">
+                    <div class="chat-code-header">
+                        <span class="chat-code-lang">${escapeHtml(cb.lang)}</span>
+                        <div class="chat-code-actions">
+                            <button class="chat-code-btn copy-snippet-btn" data-code-idx="${idx}"><i class="fa-regular fa-copy"></i> Copy</button>
+                            <button class="chat-code-btn apply-snippet-btn" data-code-idx="${idx}"><i class="fa-solid fa-code"></i> Apply to Editor</button>
+                        </div>
+                    </div>
+                    <pre class="chat-code-body"><code>${escapeHtml(cb.code)}</code></pre>
+                </div>
+            `;
+            formatted = formatted.replace(`__CODE_BLOCK_${idx}__`, blockHtml);
+        });
+
+        return { html: formatted, codeBlocks };
     }
 
     // Attach Top & Tab Fix Buttons
     const btnFixTop = document.getElementById('btnFixTop');
-    if (btnFixTop) btnFixTop.addEventListener('click', () => autoFixCode());
+    if (btnFixTop) btnFixTop.addEventListener('click', () => diagnoseCrashAndFix(consoleBody.textContent, null, true));
 
     const btnFixTab = document.getElementById('btnFixTab');
-    if (btnFixTab) btnFixTab.addEventListener('click', () => autoFixCode());
+    if (btnFixTab) btnFixTab.addEventListener('click', () => diagnoseCrashAndFix(consoleBody.textContent, null, true));
 
     btnRun.addEventListener('click', runCode);
 
