@@ -1,8 +1,8 @@
-# 🦆 Codédex Online Compiler & Cloud IDE
+# ⚡ Zero Compiler & Cloud IDE
 
-An aesthetic, retro-themed online compiler and cloud IDE inspired by **Codédex**, featuring Monaco Editor, multi-language execution, 8-bit sound effects, pixel-art themes, and **Cloud AI Agent** integration.
+An aesthetic, neo-brutalist online compiler and cloud IDE featuring Monaco Editor, multi-language execution, 8-bit sound effects, pixel-art themes, and **Cloud AI Agent** integration.
 
-![Codédex IDE](compiler/assets/duck.jpg)
+![Zero Compiler IDE](compiler/assets/duck.jpg)
 
 ---
 
@@ -76,6 +76,12 @@ powershell -Command "iwr https://fly.io/install.ps1 -useb | iex"
 fly launch
 fly deploy
 ```
+
+---
+
+## 👨‍💻 Creator & Contact
+- **Made by**: RITIK SONI
+- **Contact Email**: [hrithik.codes@gmail.com](mailto:hrithik.codes@gmail.com)
 
 ---
 
