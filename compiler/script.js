@@ -17,16 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
             template: `#include <stdio.h>
 
 int main() {
-    int num = 9;
-    printf("num%d\\n", num);
-    printf("num=%d\\n", num--);
-    printf("now num=%d\\n", num);
-
-    int num2 = 5;
-    printf("num2=%d\\n", num2);
-    printf("num2=%d\\n", ++num2);
-    printf("now num2=%d\\n", num2);
-
+    printf("Hello, World!\\n");
     return 0;
 }`
         },
@@ -37,14 +28,9 @@ int main() {
             icon: 'fa-solid fa-c',
             monacoLang: 'cpp',
             template: `#include <iostream>
-#include <vector>
 
 int main() {
-    std::cout << "Codédex C++ Online Compiler" << std::endl;
-    std::vector<std::string> fruits = {"Apple", "Banana", "Cherry"};
-    for (size_t i = 0; i < fruits.size(); ++i) {
-        std::cout << "[" << i + 1 << "]: " << fruits[i] << std::endl;
-    }
+    std::cout << "Hello, World!" << std::endl;
     return 0;
 }`
         },
@@ -55,9 +41,7 @@ int main() {
             icon: 'fa-brands fa-python',
             monacoLang: 'python',
             template: `def main():
-    print("Codédex Python Online Compiler")
-    items = ["Data", "Algorithm", "Result"]
-    print(f"Items: {', '.join(items)}")
+    print("Hello, World!")
 
 if __name__ == "__main__":
     main()`
@@ -69,9 +53,7 @@ if __name__ == "__main__":
             icon: 'fa-brands fa-js',
             monacoLang: 'javascript',
             template: `function main() {
-    console.log("Codédex JavaScript Online Compiler");
-    const languages = ["C", "C++", "Python", "JavaScript", "Go"];
-    console.log(\`Supported languages: \${languages.join(", ")}\`);
+    console.log("Hello, World!");
 }
 
 main();`
@@ -82,14 +64,12 @@ main();`
             ext: '.ts',
             icon: 'fa-solid fa-code',
             monacoLang: 'typescript',
-            template: `interface UserProfile {
-    id: number;
-    username: string;
-    role: string;
+            template: `function main(): void {
+    const greeting: string = "Hello, World!";
+    console.log(greeting);
 }
 
-const user: UserProfile = { id: 1, username: "dev_user", role: "developer" };
-console.log(\`User \${user.username} (ID: \${user.id}) - Role: \${user.role}\`);`
+main();`
         },
         java: {
             id: 'java',
@@ -99,9 +79,7 @@ console.log(\`User \${user.username} (ID: \${user.id}) - Role: \${user.role}\`);
             monacoLang: 'java',
             template: `public class Main {
     public static void main(String[] args) {
-        System.out.println("Codédex Java 21 Online Compiler");
-        int count = 10;
-        System.out.println("Execution count: " + count);
+        System.out.println("Hello, World!");
     }
 }`
         },
@@ -116,8 +94,7 @@ console.log(\`User \${user.username} (ID: \${user.id}) - Role: \${user.role}\`);
 import "fmt"
 
 func main() {
-    fmt.Println("Codédex Go Online Compiler")
-    fmt.Println("Runtime active and ready!")
+    fmt.Println("Hello, World!")
 }`
         }
     };
@@ -925,7 +902,19 @@ int main() {
         applyTheme(currentTheme);
         renderTabs();
         updateLanguageDisplay(currentLang);
+        displayPreloadedHelloWorld(currentLang);
     });
+
+    // ===== Pre-loaded Hello World Console Engine =====
+    function displayPreloadedHelloWorld(lang) {
+        renderOutput({
+            success: true,
+            stdout: "Hello, World!\n",
+            stderr: "",
+            time: 0,
+            exitCode: 0
+        });
+    }
 
     // ===== Tab Management =====
     function renderTabs() {
@@ -960,8 +949,11 @@ int main() {
 
         activeTabId = tab.id;
         editor.setModel(tab.model);
-        currentLang = tab.lang;
-        updateLanguageDisplay(currentLang);
+        if (tab.lang !== currentLang) {
+            currentLang = tab.lang;
+            updateLanguageDisplay(currentLang);
+            displayPreloadedHelloWorld(currentLang);
+        }
         renderTabs();
         playSound('click');
     }
@@ -1015,6 +1007,7 @@ int main() {
 
         updateLanguageDisplay(lang);
         renderTabs();
+        displayPreloadedHelloWorld(lang);
         playSound('click');
         showToast(`Loaded ${LANGUAGES[lang].name} Environment`);
     }
@@ -2089,11 +2082,13 @@ int main() {
     }
 
     function getSavedCode(lang) {
-        return localStorage.getItem(`codedex_code_${lang}`);
+        const saved = localStorage.getItem(`darryl_code_${lang}`);
+        if (saved && saved.trim()) return saved;
+        return null;
     }
 
     function saveCode(lang, code) {
-        localStorage.setItem(`codedex_code_${lang}`, code);
+        localStorage.setItem(`darryl_code_${lang}`, code);
     }
 
     function capitalize(s) {
