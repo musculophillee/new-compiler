@@ -18,21 +18,16 @@ import time
 import urllib.request
 import urllib.error
 
-PORT = 4000
+PORT = int(os.environ.get("PORT", 4000))
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
-# Setup MinGW path for GCC
+# Setup MinGW path for GCC on Windows if present
 MINGW_BIN = r"C:\mingw64\bin"
 if os.path.exists(MINGW_BIN) and MINGW_BIN not in os.environ.get("PATH", ""):
     os.environ["PATH"] = MINGW_BIN + os.pathsep + os.environ.get("PATH", "")
 
-GXX_PATH = r"C:\mingw64\bin\g++.exe"
-if not os.path.exists(GXX_PATH):
-    GXX_PATH = shutil.which("g++")
-
-GCC_PATH = r"C:\mingw64\bin\gcc.exe"
-if not os.path.exists(GCC_PATH):
-    GCC_PATH = shutil.which("gcc")
+GXX_PATH = shutil.which("g++") or (r"C:\mingw64\bin\g++.exe" if os.path.exists(r"C:\mingw64\bin\g++.exe") else None)
+GCC_PATH = shutil.which("gcc") or (r"C:\mingw64\bin\gcc.exe" if os.path.exists(r"C:\mingw64\bin\gcc.exe") else None)
 
 JAVAC_PATH = r"C:\Program Files\Common Files\Oracle\Java\javapath\javac.EXE"
 if not os.path.exists(JAVAC_PATH):
@@ -1566,12 +1561,16 @@ if __name__ == "__main__":
                     if not GXX_PATH or not os.path.exists(GXX_PATH):
                         return {"success": False, "stdout": "", "stderr": "C++ compiler (g++) not found.", "exitCode": 1, "time": 0}
                     src = os.path.join(temp_dir, "main.cpp")
-                    exe = os.path.join(temp_dir, "main.exe")
+                    exe = os.path.join(temp_dir, "main.exe" if os.name == "nt" else "main.out")
                     with open(src, "w", encoding="utf-8") as f:
                         f.write(code)
-                    comp = subprocess.run([GXX_PATH, "-O2", "-static", src, "-o", exe], capture_output=True, text=True, timeout=15, env=os.environ)
+                    comp_flags = [GXX_PATH, "-O2", src, "-o", exe]
+                    comp = subprocess.run(comp_flags, capture_output=True, text=True, timeout=15, env=os.environ)
                     if comp.returncode != 0:
                         return {"success": False, "stdout": "", "stderr": "Compilation Error:\n" + comp.stderr, "exitCode": comp.returncode, "time": round((time.time() - start_time) * 1000)}
+                    if os.name != "nt":
+                        try: os.chmod(exe, 0o755)
+                        except Exception: pass
                     run = subprocess.run([exe], input=stdin_input, capture_output=True, text=True, timeout=timeout_seconds, env=os.environ)
                     elapsed = round((time.time() - start_time) * 1000)
                     return {"success": run.returncode == 0, "stdout": run.stdout, "stderr": run.stderr, "exitCode": run.returncode, "time": elapsed}
@@ -1581,12 +1580,16 @@ if __name__ == "__main__":
                     if not compiler or not os.path.exists(compiler):
                         return {"success": False, "stdout": "", "stderr": "C compiler (gcc) not found.", "exitCode": 1, "time": 0}
                     src = os.path.join(temp_dir, "main.c")
-                    exe = os.path.join(temp_dir, "main.exe")
+                    exe = os.path.join(temp_dir, "main.exe" if os.name == "nt" else "main.out")
                     with open(src, "w", encoding="utf-8") as f:
                         f.write(code)
-                    comp = subprocess.run([compiler, "-O2", "-static", src, "-o", exe], capture_output=True, text=True, timeout=15, env=os.environ)
+                    comp_flags = [compiler, "-O2", src, "-o", exe]
+                    comp = subprocess.run(comp_flags, capture_output=True, text=True, timeout=15, env=os.environ)
                     if comp.returncode != 0:
                         return {"success": False, "stdout": "", "stderr": "Compilation Error:\n" + comp.stderr, "exitCode": comp.returncode, "time": round((time.time() - start_time) * 1000)}
+                    if os.name != "nt":
+                        try: os.chmod(exe, 0o755)
+                        except Exception: pass
                     run = subprocess.run([exe], input=stdin_input, capture_output=True, text=True, timeout=timeout_seconds, env=os.environ)
                     elapsed = round((time.time() - start_time) * 1000)
                     return {"success": run.returncode == 0, "stdout": run.stdout, "stderr": run.stderr, "exitCode": run.returncode, "time": elapsed}

@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: codedex-compiler
+    runtime: docker
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 10000
+    healthCheckPath: /api/health

@@ -58,5 +58,26 @@ http://localhost:4000
 
 ---
 
+## 🌐 Deploy to the Cloud (Render / Fly.io)
+
+### Option A: Render.com (1-Click Deployment)
+1. Go to [dashboard.render.com](https://dashboard.render.com).
+2. Click **New +** -> **Web Service**.
+3. Connect your GitHub repository `https://github.com/musculophillee/new-compiler`.
+4. Render will automatically detect the **Dockerfile** and configure the service.
+5. Click **Deploy Web Service** — your compiler is live on your free `.onrender.com` domain!
+
+### Option B: Fly.io
+```bash
+# Install flyctl
+powershell -Command "iwr https://fly.io/install.ps1 -useb | iex"
+
+# Launch and deploy
+fly launch
+fly deploy
+```
+
+---
+
 ## 📄 License
 MIT License
