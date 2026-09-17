@@ -966,7 +966,7 @@ int main() {
         if (!editor) return;
         const langInfo = LANGUAGES[lang] || LANGUAGES.c;
         const id = nextTabId++;
-        const name = `spell${id}${langInfo.ext}`;
+        const name = `module${id}${langInfo.ext}`;
         const template = getSavedCode(lang) || langInfo.template;
         const model = monaco.editor.createModel(template, langInfo.monacoLang);
 
@@ -1012,14 +1012,14 @@ int main() {
         updateLanguageDisplay(lang);
         renderTabs();
         playSound('click');
-        showToast(`Equipped ${LANGUAGES[lang].name} Spell Scroll`);
+        showToast(`Loaded ${LANGUAGES[lang].name} Environment`);
     }
 
     function updateLanguageDisplay(lang) {
         const info = LANGUAGES[lang] || LANGUAGES.c;
         currentLangName.textContent = info.name;
         currentLangIcon.innerHTML = `<i class="${info.icon}"></i>`;
-        sbLang.textContent = `📜 Spell: ${info.name}`;
+        sbLang.textContent = info.name;
 
         document.querySelectorAll('#langDropdownMenu .dropdown-item').forEach(item => {
             item.classList.toggle('active', item.getAttribute('data-lang') === lang);
