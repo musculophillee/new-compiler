@@ -13,17 +13,26 @@
 html {
     scroll-behavior: smooth;
     font-size: 16px;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
 }
 
-body {
-    min-height: 100vh;
+body.home-page {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
     background-color: var(--color-bg-main);
     color: var(--color-fg-main);
     font-family: var(--font-sans);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
     position: relative;
 }
 
