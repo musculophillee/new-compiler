@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/compiler/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/compiler/$1"
+    }
+  ]
+}
