@@ -11,12 +11,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500;600&family=Press+Start+2P&display=swap" rel="stylesheet">
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=3.3.0">
+    <link rel="stylesheet" href="style.css?v=3.5.0">
     <script src="theme.js"></script>
     <!-- Monaco Editor Loader -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
     <!-- Canvas Confetti for Level-Up Celebrations -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <!-- Cloudflare Turnstile CAPTCHA (Free, Privacy-Preserving Bot Protection) -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
     <div class="codedex-app">
@@ -516,51 +518,79 @@
                 <button class="modal-close" data-close="modalAuth" title="Close"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body neo-auth-body">
-                <div class="auth-banner-callout">
-                    <div class="auth-banner-badge"><i class="fa-solid fa-bolt"></i> AI AGENT ACCESS REQUIRED</div>
-                    <h2 class="auth-banner-heading">SIGN IN TO ZERO COMPILER</h2>
-                    <p class="auth-banner-desc">Authenticate to unlock <strong>Why Did My Code Crash?</strong>, <strong>1-Click Auto-Fix</strong>, and algorithmic code assistance.</p>
+                <div class="auth-banner-compact">
+                    <span class="auth-banner-badge"><i class="fa-solid fa-bolt"></i> AI ACCESS</span>
+                    <span class="auth-banner-subtext">Sign in to unlock <strong>Why Did My Code Crash?</strong> & <strong>1-Click Auto-Fix</strong></span>
                 </div>
 
-                <div class="auth-options-grid">
-                    <!-- Continue with Google -->
-                    <button class="arcade-btn neo-auth-btn btn-google" id="btnAuthGoogle">
-                        <svg class="neo-auth-icon" viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                        </svg>
-                        <span>CONTINUE WITH GOOGLE</span>
-                    </button>
+                <!-- Main Auth View: Privy.io Powered Authentication -->
+                <div id="authMainContainer" class="privy-auth-container">
+                    <!-- Dynamic Alert Banner -->
+                    <div class="neo-auth-alert" id="authAlertBanner" style="display: none;"></div>
 
-                    <!-- Continue with Email -->
-                    <button class="arcade-btn neo-auth-btn btn-email" id="btnToggleEmailAuth">
-                        <i class="fa-regular fa-envelope neo-auth-icon"></i>
-                        <span>CONTINUE WITH EMAIL</span>
-                    </button>
-
-                    <!-- Collapsible Email Form -->
-                    <form class="neo-auth-form" id="authEmailForm" style="display: none;">
-                        <div class="auth-field-row">
-                            <label for="authEmailInput">DEVELOPER EMAIL</label>
-                            <input type="email" id="authEmailInput" class="retro-input neo-auth-input" placeholder="you@example.com" required>
+                    <!-- Privy Passwordless Email Entry -->
+                    <form class="privy-email-form" id="formPrivyEmail">
+                        <label for="privyEmailInput" class="privy-field-label">
+                            <i class="fa-solid fa-envelope"></i> EMAIL ADDRESS
+                        </label>
+                        <div class="privy-email-input-group">
+                            <input type="email" id="privyEmailInput" class="privy-input" placeholder="Enter your email to continue..." autocomplete="email" required>
+                            <button type="submit" class="arcade-btn btn-privy-submit" id="btnSubmitPrivyEmail">
+                                <span>CONTINUE</span>
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </button>
                         </div>
-                        <div class="auth-field-row">
-                            <label for="authNameInput">CODER HANDLE / NAME</label>
-                            <input type="text" id="authNameInput" class="retro-input neo-auth-input" placeholder="e.g. NeoCoder">
-                        </div>
-                        <button type="submit" class="arcade-btn btn-auth-submit" id="btnSubmitEmailAuth">
-                            <span>SIGN IN / CREATE ACCOUNT</span>
-                            <i class="fa-solid fa-arrow-right"></i>
-                        </button>
                     </form>
 
-                    <!-- Continue with GitHub -->
-                    <button class="arcade-btn neo-auth-btn btn-github" id="btnAuthGithub">
-                        <i class="fa-brands fa-github neo-auth-icon"></i>
-                        <span>CONTINUE WITH GITHUB</span>
-                    </button>
+                    <!-- Privy Divider -->
+                    <div class="privy-divider">
+                        <span>OR CONNECT INSTANTLY</span>
+                    </div>
+
+                    <!-- 1-Click Privy Web3 & Social Buttons -->
+                    <div class="privy-social-stack">
+                        <button type="button" class="arcade-btn privy-btn btn-privy-google" id="btnPrivyGoogle" title="Continue with Google">
+                            <svg class="privy-icon" viewBox="0 0 24 24" width="18" height="18">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                            </svg>
+                            <span id="textPrivyGoogle">CONTINUE WITH GOOGLE</span>
+                        </button>
+                        <button type="button" class="arcade-btn privy-btn btn-privy-github" id="btnPrivyGithub" title="Continue with GitHub">
+                            <i class="fa-brands fa-github privy-icon"></i>
+                            <span id="textPrivyGithub">CONTINUE WITH GITHUB</span>
+                        </button>
+                        <button type="button" class="arcade-btn privy-btn btn-privy-wallet" id="btnPrivyWallet" title="Connect Web3 Wallet (MetaMask / Ethereum)">
+                            <i class="fa-solid fa-wallet privy-icon"></i>
+                            <span id="textPrivyWallet">CONNECT WEB3 WALLET</span>
+                        </button>
+                    </div>
+
+                    <!-- Optional Privy App ID Configuration -->
+                    <div class="privy-config-accordion">
+                        <button type="button" class="btn-toggle-privy-config" id="btnTogglePrivyConfig">
+                            <span><i class="fa-solid fa-gear"></i> Privy App Configuration (Optional)</span>
+                            <i class="fa-solid fa-chevron-down" id="iconPrivyChevron"></i>
+                        </button>
+                        <div class="privy-config-drawer" id="privyConfigDrawer" style="display: none;">
+                            <label for="inputPrivyAppId"><i class="fa-solid fa-key"></i> PRIVY APP ID</label>
+                            <div class="privy-config-input-row">
+                                <input type="text" id="inputPrivyAppId" class="privy-input" placeholder="e.g. clabc123... from dashboard.privy.io">
+                                <button type="button" class="btn-save-privy-id" id="btnSavePrivyId">SAVE</button>
+                            </div>
+                            <span class="privy-config-hint">Get your free App ID at <a href="https://dashboard.privy.io" target="_blank" rel="noopener">dashboard.privy.io</a></span>
+                        </div>
+                    </div>
+
+                    <!-- Protected by Privy.io Footer -->
+                    <div class="privy-footer-badge">
+                        <a href="https://privy.io" target="_blank" rel="noopener" class="privy-brand-link" title="Privy.io Authentication">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <span>Protected by <strong>Privy.io</strong> Web3 & Social Auth</span>
+                        </a>
+                    </div>
                 </div>
 
                 <div class="neo-auth-legal">
@@ -658,6 +688,6 @@
     <!-- Toast Banner -->
     <div class="retro-toast" id="toast"></div>
 
-    <script src="script.js?v=3.3.0"></script>
+    <script src="script.js?v=3.5.0"></script>
 </body>
 </html>

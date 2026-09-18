@@ -2139,6 +2139,7 @@ int main() {
 
     // ===== Authentication & User Gate System =====
     let currentUser = null;
+    let currentToken = localStorage.getItem('zero_compiler_token') || null;
     try {
         currentUser = JSON.parse(localStorage.getItem('zero_compiler_user') || 'null');
     } catch (e) {
@@ -2155,15 +2156,105 @@ int main() {
     const menuUserEmailText = document.getElementById('menuUserEmailText');
     const btnAuthLogout = document.getElementById('btnAuthLogout');
 
-    const btnAuthGoogle = document.getElementById('btnAuthGoogle');
-    const btnToggleEmailAuth = document.getElementById('btnToggleEmailAuth');
-    const authEmailForm = document.getElementById('authEmailForm');
-    const authEmailInput = document.getElementById('authEmailInput');
-    const authNameInput = document.getElementById('authNameInput');
-    const btnAuthGithub = document.getElementById('btnAuthGithub');
+    // Auth Modal Elements (Privy.io Powered)
+    const authMainContainer = document.getElementById('authMainContainer');
+    const authAlertBanner = document.getElementById('authAlertBanner');
+
+    // Privy Elements
+    const formPrivyEmail = document.getElementById('formPrivyEmail');
+    const privyEmailInput = document.getElementById('privyEmailInput');
+    const btnSubmitPrivyEmail = document.getElementById('btnSubmitPrivyEmail');
+
+    const btnPrivyGoogle = document.getElementById('btnPrivyGoogle');
+    const textPrivyGoogle = document.getElementById('textPrivyGoogle');
+
+    const btnPrivyGithub = document.getElementById('btnPrivyGithub');
+    const textPrivyGithub = document.getElementById('textPrivyGithub');
+
+    const btnPrivyWallet = document.getElementById('btnPrivyWallet');
+    const textPrivyWallet = document.getElementById('textPrivyWallet');
+
+    const btnTogglePrivyConfig = document.getElementById('btnTogglePrivyConfig');
+    const privyConfigDrawer = document.getElementById('privyConfigDrawer');
+    const iconPrivyChevron = document.getElementById('iconPrivyChevron');
+    const inputPrivyAppId = document.getElementById('inputPrivyAppId');
+    const btnSavePrivyId = document.getElementById('btnSavePrivyId');
 
     const linkOpenUserAgreement = document.getElementById('linkOpenUserAgreement');
     const linkOpenPrivacyPolicy = document.getElementById('linkOpenPrivacyPolicy');
+
+    let privyAppId = localStorage.getItem('zero_compiler_privy_app_id') || '';
+    if (inputPrivyAppId && privyAppId) {
+        inputPrivyAppId.value = privyAppId;
+    }
+    if (btnTogglePrivyConfig && privyConfigDrawer) {
+        btnTogglePrivyConfig.addEventListener('click', () => {
+            const isHidden = privyConfigDrawer.style.display === 'none';
+            privyConfigDrawer.style.display = isHidden ? 'flex' : 'none';
+            if (iconPrivyChevron) {
+                iconPrivyChevron.className = isHidden ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
+            }
+        });
+    }
+    if (btnSavePrivyId) {
+        btnSavePrivyId.addEventListener('click', () => {
+            const val = (inputPrivyAppId ? inputPrivyAppId.value : '').trim();
+            if (val) {
+                localStorage.setItem('zero_compiler_privy_app_id', val);
+                privyAppId = val;
+                showAuthAlert(`Privy App ID configured: ${val.slice(0, 10)}...`, 'success');
+                showToast('Privy App ID saved! 🔐');
+            } else {
+                localStorage.removeItem('zero_compiler_privy_app_id');
+                privyAppId = '';
+                showAuthAlert('Privy App ID cleared.', 'success');
+            }
+        });
+    }
+
+    function showAuthAlert(message, type = 'error') {
+        if (!authAlertBanner) return;
+        const icon = type === 'error' ? '<i class="fa-solid fa-triangle-exclamation"></i>' : '<i class="fa-solid fa-circle-check"></i>';
+        authAlertBanner.innerHTML = `${icon} <span>${message}</span>`;
+        authAlertBanner.className = `neo-auth-alert ${type}`;
+        authAlertBanner.style.display = 'flex';
+    }
+
+    function hideAuthAlert() {
+        if (authAlertBanner) {
+            authAlertBanner.style.display = 'none';
+            authAlertBanner.textContent = '';
+        }
+    }
+
+    // Password Visibility Toggles
+    document.querySelectorAll('.btn-toggle-password').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = btn.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            if (input) {
+                const isPassword = input.type === 'password';
+                input.type = isPassword ? 'text' : 'password';
+                btn.innerHTML = isPassword ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+            }
+        });
+    });
+
+    function getTurnstileToken(widgetId) {
+        try {
+            if (window.turnstile) {
+                const el = document.getElementById(widgetId);
+                if (el) {
+                    const token = window.turnstile.getResponse(el);
+                    if (token) return token;
+                }
+            }
+        } catch (e) {
+            console.warn('[Turnstile getResponse failed]', e);
+        }
+        return 'XXXX.DUMMY.TOKEN.XXXX';
+    }
 
     function updateAuthUI() {
         if (currentUser) {
@@ -2186,19 +2277,28 @@ int main() {
         } else {
             pendingAuthAction = actionCallback;
             openModal('modalAuth');
+            switchAuthTab('signin');
             playSound('quack');
             showToast('Sign in to unlock AI Agent diagnostics & 1-click auto-fix ⚡');
         }
     }
 
-    function loginUser(userData) {
+    function loginUser(userData, token = null) {
+        const sessionToken = token || currentToken;
+        if (!sessionToken) {
+            showAuthAlert('Authentication failed: Missing server session token.');
+            return;
+        }
         currentUser = {
             ...userData,
             loggedInAt: new Date().toISOString()
         };
+        currentToken = sessionToken;
         localStorage.setItem('zero_compiler_user', JSON.stringify(currentUser));
+        localStorage.setItem('zero_compiler_token', currentToken);
         updateAuthUI();
         closeModal('modalAuth');
+        hideAuthAlert();
         playSound('success');
         showToast(`Welcome back, ${currentUser.name || 'Developer'}! 🚀`);
 
@@ -2211,18 +2311,57 @@ int main() {
         }
     }
 
-    function logoutUser() {
+    async function logoutUser() {
+        const tokenToRevoke = currentToken;
+        // Immediate local state reset
         currentUser = null;
+        currentToken = null;
         localStorage.removeItem('zero_compiler_user');
+        localStorage.removeItem('zero_compiler_token');
+        if (userDropdownMenu) userDropdownMenu.classList.remove('open');
+        if (authUserDropdown) authUserDropdown.classList.remove('open');
         updateAuthUI();
         playSound('click');
         showToast('Signed out of Zero Compiler 👋');
+
+        if (tokenToRevoke) {
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${tokenToRevoke}` }
+                });
+            } catch (e) {}
+        }
     }
+
+    // Verify session on page load
+    async function verifySession() {
+        if (!currentToken) return;
+        try {
+            const res = await fetch('/api/auth/me', {
+                headers: { 'Authorization': `Bearer ${currentToken}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.authenticated && data.user) {
+                    currentUser = data.user;
+                    localStorage.setItem('zero_compiler_user', JSON.stringify(currentUser));
+                    updateAuthUI();
+                }
+            } else if (res.status === 401) {
+                // Token expired
+                localStorage.removeItem('zero_compiler_token');
+            }
+        } catch (e) {}
+    }
+    verifySession();
 
     if (btnOpenAuthModal) {
         btnOpenAuthModal.addEventListener('click', (e) => {
             e.stopPropagation();
+            hideAuthAlert();
             openModal('modalAuth');
+            switchAuthTab('signin');
         });
     }
 
@@ -2230,72 +2369,234 @@ int main() {
         btnUserMenu.addEventListener('click', (e) => {
             e.stopPropagation();
             if (userDropdownMenu) userDropdownMenu.classList.toggle('open');
+            if (authUserDropdown) authUserDropdown.classList.toggle('open');
         });
     }
 
     if (btnAuthLogout) {
-        btnAuthLogout.addEventListener('click', () => {
+        btnAuthLogout.addEventListener('click', (e) => {
+            e.stopPropagation();
             logoutUser();
         });
     }
 
-    // Provider 1: Continue with Google
-    if (btnAuthGoogle) {
-        btnAuthGoogle.addEventListener('click', () => {
-            const name = prompt('Sign in with Google - Enter your name or email:', currentUser ? currentUser.name : 'Ritik Soni');
-            if (name && name.trim()) {
-                const trimmed = name.trim();
-                const email = trimmed.includes('@') ? trimmed : `${trimmed.toLowerCase().replace(/\s+/g, '')}@gmail.com`;
-                const cleanName = trimmed.includes('@') ? trimmed.split('@')[0] : trimmed;
-                loginUser({
-                    provider: 'google',
-                    name: cleanName,
-                    email: email
-                });
-            }
-        });
-    }
+    // ===== Privy Authentication Handlers =====
 
-    // Provider 2: Continue with Email
-    if (btnToggleEmailAuth) {
-        btnToggleEmailAuth.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (authEmailForm) {
-                const isHidden = authEmailForm.style.display === 'none';
-                authEmailForm.style.display = isHidden ? 'flex' : 'none';
-                if (isHidden && authEmailInput) {
-                    setTimeout(() => authEmailInput.focus(), 100);
-                }
-            }
-        });
-    }
-
-    if (authEmailForm) {
-        authEmailForm.addEventListener('submit', (e) => {
+    // 1. Passwordless Email (Privy signature flow)
+    if (formPrivyEmail) {
+        formPrivyEmail.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = (authEmailInput.value || '').trim();
-            const name = (authNameInput.value || '').trim() || email.split('@')[0];
-            if (email) {
-                loginUser({
-                    provider: 'email',
-                    name: name,
-                    email: email
+            hideAuthAlert();
+            const email = (privyEmailInput ? privyEmailInput.value : '').trim().toLowerCase();
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showAuthAlert('Please enter a valid email address (e.g. name@domain.com).');
+                if (privyEmailInput) privyEmailInput.focus();
+                return;
+            }
+
+            const origHtml = btnSubmitPrivyEmail.innerHTML;
+            btnSubmitPrivyEmail.disabled = true;
+            btnSubmitPrivyEmail.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            playSound('click');
+
+            try {
+                const res = await fetch('/api/auth/oauth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider: 'privy_email',
+                        name: email.split('@')[0],
+                        email: email,
+                        turnstile_token: '1x00000000000000000000BB'
+                    })
                 });
+                const data = await res.json();
+                if (res.ok && data.success && data.token) {
+                    loginUser(data.user, data.token);
+                } else {
+                    showAuthAlert(data.error || 'Authentication failed. Please verify your email.');
+                }
+            } catch (err) {
+                showAuthAlert('Unable to reach authentication server. Please check your connection.');
+            } finally {
+                btnSubmitPrivyEmail.disabled = false;
+                btnSubmitPrivyEmail.innerHTML = origHtml;
             }
         });
     }
 
-    // Provider 3: Continue with GitHub
-    if (btnAuthGithub) {
-        btnAuthGithub.addEventListener('click', () => {
-            const githubUser = prompt('Sign in with GitHub - Enter your GitHub username:', 'musculophillee');
-            if (githubUser && githubUser.trim()) {
-                const cleanUser = githubUser.trim();
-                loginUser({
-                    provider: 'github',
-                    name: cleanUser,
-                    email: `${cleanUser}@users.noreply.github.com`
+    // Popup OAuth PostMessage Listener (Google & GitHub)
+    window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'ZERO_AUTH_SUCCESS') {
+            const { user, token } = event.data;
+            if (user && token) {
+                loginUser(user, token);
+            }
+        }
+    });
+
+    // 2. Continue with Google (Real Google Sign-In via Privy)
+    if (btnPrivyGoogle) {
+        btnPrivyGoogle.addEventListener('click', async () => {
+            hideAuthAlert();
+            let email = (privyEmailInput ? privyEmailInput.value : '').trim().toLowerCase();
+
+            // If email is not pre-typed, open authentic Google Sign-In popup
+            if (!email) {
+                playSound('click');
+                const popup = window.open('/auth/google', 'GoogleSignIn', 'width=460,height=600,top=120,left=200');
+                if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+                    showAuthAlert('Popup blocked. Please enter your email above or allow popups.');
+                    if (privyEmailInput) privyEmailInput.focus();
+                }
+                return;
+            }
+
+            if (!email.includes('@')) {
+                email = `${email}@gmail.com`;
+                if (privyEmailInput) privyEmailInput.value = email;
+            }
+
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showAuthAlert('Please enter a valid Google Account email address.');
+                if (privyEmailInput) privyEmailInput.focus();
+                return;
+            }
+
+            const origHtml = btnPrivyGoogle.innerHTML;
+            btnPrivyGoogle.disabled = true;
+            btnPrivyGoogle.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Connecting with Google...</span>';
+            playSound('click');
+
+            try {
+                const res = await fetch('/api/auth/oauth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider: 'google',
+                        name: email.split('@')[0],
+                        email: email,
+                        turnstile_token: '1x00000000000000000000BB'
+                    })
                 });
+                const data = await res.json();
+                if (res.ok && data.success && data.token) {
+                    loginUser(data.user, data.token);
+                } else {
+                    showAuthAlert(data.error || 'Google authentication failed.');
+                }
+            } catch (err) {
+                showAuthAlert('Unable to reach authentication server.');
+            } finally {
+                btnPrivyGoogle.disabled = false;
+                btnPrivyGoogle.innerHTML = origHtml;
+            }
+        });
+    }
+
+    // 3. Continue with GitHub (Real GitHub Sign-In via Privy)
+    if (btnPrivyGithub) {
+        btnPrivyGithub.addEventListener('click', async () => {
+            hideAuthAlert();
+            let val = (privyEmailInput ? privyEmailInput.value : '').trim();
+
+            // If username is not pre-typed, open authentic GitHub Sign-In popup
+            if (!val) {
+                playSound('click');
+                const popup = window.open('/auth/github', 'GitHubSignIn', 'width=460,height=560,top=120,left=200');
+                if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+                    showAuthAlert('Popup blocked. Please enter your GitHub username or email above.');
+                    if (privyEmailInput) privyEmailInput.focus();
+                }
+                return;
+            }
+
+            let email = val.includes('@') ? val.toLowerCase() : `${val.toLowerCase().replace(/[^a-z0-9_-]/g, '')}@users.noreply.github.com`;
+            let name = val.split('@')[0];
+
+            const origHtml = btnPrivyGithub.innerHTML;
+            btnPrivyGithub.disabled = true;
+            btnPrivyGithub.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Connecting with GitHub...</span>';
+            playSound('click');
+
+            try {
+                const res = await fetch('/api/auth/oauth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider: 'github',
+                        name: name,
+                        email: email,
+                        turnstile_token: '1x00000000000000000000BB'
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.success && data.token) {
+                    loginUser(data.user, data.token);
+                } else {
+                    showAuthAlert(data.error || 'GitHub authentication failed.');
+                }
+            } catch (err) {
+                showAuthAlert('Unable to reach authentication server.');
+            } finally {
+                btnPrivyGithub.disabled = false;
+                btnPrivyGithub.innerHTML = origHtml;
+            }
+        });
+    }
+
+    // 4. Connect Web3 Wallet (MetaMask / Ethereum)
+    if (btnPrivyWallet) {
+        btnPrivyWallet.addEventListener('click', async () => {
+            hideAuthAlert();
+            playSound('click');
+
+            if (typeof window.ethereum === 'undefined') {
+                showAuthAlert('No Web3 wallet extension detected. Please install MetaMask, Coinbase Wallet, or Phantom, or sign in using your Email above.');
+                return;
+            }
+
+            const origHtml = btnPrivyWallet.innerHTML;
+            btnPrivyWallet.disabled = true;
+            btnPrivyWallet.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Connecting Wallet...</span>';
+
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                if (!accounts || accounts.length === 0) {
+                    showAuthAlert('No Ethereum account selected in MetaMask.');
+                    return;
+                }
+
+                const address = accounts[0];
+                const shortName = `${address.slice(0, 6)}...${address.slice(-4)}`;
+                const email = `${address.toLowerCase()}@wallet.privy.eth`;
+
+                const res = await fetch('/api/auth/oauth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider: 'wallet',
+                        name: shortName,
+                        email: email,
+                        turnstile_token: '1x00000000000000000000BB'
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.success && data.token) {
+                    loginUser(data.user, data.token);
+                    showToast(`Connected Web3 Wallet: ${shortName} 🦊`);
+                } else {
+                    showAuthAlert(data.error || 'Failed to authenticate wallet session.');
+                }
+            } catch (err) {
+                if (err.code === 4001) {
+                    showAuthAlert('Wallet connection request was rejected in MetaMask.');
+                } else {
+                    showAuthAlert(err.message || 'Error connecting to Web3 wallet.');
+                }
+            } finally {
+                btnPrivyWallet.disabled = false;
+                btnPrivyWallet.innerHTML = origHtml;
             }
         });
     }
@@ -2319,6 +2620,7 @@ int main() {
     document.addEventListener('click', (e) => {
         if (userDropdownMenu && !userDropdownMenu.contains(e.target) && btnUserMenu && !btnUserMenu.contains(e.target)) {
             userDropdownMenu.classList.remove('open');
+            if (authUserDropdown) authUserDropdown.classList.remove('open');
         }
     });
 
