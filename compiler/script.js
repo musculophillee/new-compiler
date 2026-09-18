@@ -1438,11 +1438,15 @@ int main() {
                 const btnAutoFixQuick = crashBanner.querySelector('#btnAutoFixQuick');
 
                 btnWhyCrash.addEventListener('click', () => {
-                    diagnoseCrashAndFix(data.stderr || consoleBody.textContent, crashBanner, false);
+                    requireAuth(() => {
+                        diagnoseCrashAndFix(data.stderr || consoleBody.textContent, crashBanner, false);
+                    });
                 });
 
                 btnAutoFixQuick.addEventListener('click', () => {
-                    diagnoseCrashAndFix(data.stderr || consoleBody.textContent, crashBanner, true);
+                    requireAuth(() => {
+                        diagnoseCrashAndFix(data.stderr || consoleBody.textContent, crashBanner, true);
+                    });
                 });
             }
         }
@@ -1657,12 +1661,21 @@ int main() {
         return { html: formatted, codeBlocks };
     }
 
-    // Attach Top & Tab Fix Buttons
+    // Attach Top & Tab Fix Buttons with Auth Protection
     const btnFixTop = document.getElementById('btnFixTop');
-    if (btnFixTop) btnFixTop.addEventListener('click', () => diagnoseCrashAndFix(consoleBody.textContent, null, true));
+    if (btnFixTop) btnFixTop.addEventListener('click', () => requireAuth(() => diagnoseCrashAndFix(consoleBody.textContent, null, true)));
 
     const btnFixTab = document.getElementById('btnFixTab');
-    if (btnFixTab) btnFixTab.addEventListener('click', () => diagnoseCrashAndFix(consoleBody.textContent, null, true));
+    if (btnFixTab) btnFixTab.addEventListener('click', () => requireAuth(() => diagnoseCrashAndFix(consoleBody.textContent, null, true)));
+
+    if (btnAiQuick) {
+        btnAiQuick.addEventListener('click', () => {
+            requireAuth(() => {
+                const aiTab = document.querySelector('.qtab[data-pane="ai"]');
+                if (aiTab) aiTab.click();
+            });
+        });
+    }
 
     btnRun.addEventListener('click', runCode);
 
@@ -2098,7 +2111,7 @@ int main() {
     // Modals
     btnSettings.addEventListener('click', () => openModal('modalSettings'));
 
-    document.querySelectorAll('.modal-close').forEach(btn => {
+    document.querySelectorAll('.modal-close, .modal-close-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const modalId = btn.getAttribute('data-close');
             closeModal(modalId);
@@ -2123,6 +2136,194 @@ int main() {
         const modal = document.getElementById(id);
         if (modal) modal.classList.remove('open');
     }
+
+    // ===== Authentication & User Gate System =====
+    let currentUser = null;
+    try {
+        currentUser = JSON.parse(localStorage.getItem('zero_compiler_user') || 'null');
+    } catch (e) {
+        currentUser = null;
+    }
+    let pendingAuthAction = null;
+
+    const btnOpenAuthModal = document.getElementById('btnOpenAuthModal');
+    const authUserDropdown = document.getElementById('authUserDropdown');
+    const btnUserMenu = document.getElementById('btnUserMenu');
+    const userDropdownMenu = document.getElementById('userDropdownMenu');
+    const topbarUserName = document.getElementById('topbarUserName');
+    const topbarUserAvatar = document.getElementById('topbarUserAvatar');
+    const menuUserEmailText = document.getElementById('menuUserEmailText');
+    const btnAuthLogout = document.getElementById('btnAuthLogout');
+
+    const btnAuthGoogle = document.getElementById('btnAuthGoogle');
+    const btnToggleEmailAuth = document.getElementById('btnToggleEmailAuth');
+    const authEmailForm = document.getElementById('authEmailForm');
+    const authEmailInput = document.getElementById('authEmailInput');
+    const authNameInput = document.getElementById('authNameInput');
+    const btnAuthGithub = document.getElementById('btnAuthGithub');
+
+    const linkOpenUserAgreement = document.getElementById('linkOpenUserAgreement');
+    const linkOpenPrivacyPolicy = document.getElementById('linkOpenPrivacyPolicy');
+
+    function updateAuthUI() {
+        if (currentUser) {
+            if (btnOpenAuthModal) btnOpenAuthModal.style.display = 'none';
+            if (authUserDropdown) authUserDropdown.style.display = 'block';
+            const displayName = currentUser.name || (currentUser.email ? currentUser.email.split('@')[0] : 'Developer');
+            if (topbarUserName) topbarUserName.textContent = displayName;
+            if (topbarUserAvatar) topbarUserAvatar.textContent = displayName.charAt(0).toUpperCase();
+            if (menuUserEmailText) menuUserEmailText.textContent = currentUser.email || 'developer@zerocompiler.com';
+        } else {
+            if (btnOpenAuthModal) btnOpenAuthModal.style.display = 'inline-flex';
+            if (authUserDropdown) authUserDropdown.style.display = 'none';
+            if (userDropdownMenu) userDropdownMenu.classList.remove('open');
+        }
+    }
+
+    function requireAuth(actionCallback) {
+        if (currentUser) {
+            actionCallback();
+        } else {
+            pendingAuthAction = actionCallback;
+            openModal('modalAuth');
+            playSound('quack');
+            showToast('Sign in to unlock AI Agent diagnostics & 1-click auto-fix ⚡');
+        }
+    }
+
+    function loginUser(userData) {
+        currentUser = {
+            ...userData,
+            loggedInAt: new Date().toISOString()
+        };
+        localStorage.setItem('zero_compiler_user', JSON.stringify(currentUser));
+        updateAuthUI();
+        closeModal('modalAuth');
+        playSound('success');
+        showToast(`Welcome back, ${currentUser.name || 'Developer'}! 🚀`);
+
+        if (pendingAuthAction) {
+            const action = pendingAuthAction;
+            pendingAuthAction = null;
+            setTimeout(() => {
+                action();
+            }, 300);
+        }
+    }
+
+    function logoutUser() {
+        currentUser = null;
+        localStorage.removeItem('zero_compiler_user');
+        updateAuthUI();
+        playSound('click');
+        showToast('Signed out of Zero Compiler 👋');
+    }
+
+    if (btnOpenAuthModal) {
+        btnOpenAuthModal.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openModal('modalAuth');
+        });
+    }
+
+    if (btnUserMenu) {
+        btnUserMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (userDropdownMenu) userDropdownMenu.classList.toggle('open');
+        });
+    }
+
+    if (btnAuthLogout) {
+        btnAuthLogout.addEventListener('click', () => {
+            logoutUser();
+        });
+    }
+
+    // Provider 1: Continue with Google
+    if (btnAuthGoogle) {
+        btnAuthGoogle.addEventListener('click', () => {
+            const name = prompt('Sign in with Google - Enter your name or email:', currentUser ? currentUser.name : 'Ritik Soni');
+            if (name && name.trim()) {
+                const trimmed = name.trim();
+                const email = trimmed.includes('@') ? trimmed : `${trimmed.toLowerCase().replace(/\s+/g, '')}@gmail.com`;
+                const cleanName = trimmed.includes('@') ? trimmed.split('@')[0] : trimmed;
+                loginUser({
+                    provider: 'google',
+                    name: cleanName,
+                    email: email
+                });
+            }
+        });
+    }
+
+    // Provider 2: Continue with Email
+    if (btnToggleEmailAuth) {
+        btnToggleEmailAuth.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (authEmailForm) {
+                const isHidden = authEmailForm.style.display === 'none';
+                authEmailForm.style.display = isHidden ? 'flex' : 'none';
+                if (isHidden && authEmailInput) {
+                    setTimeout(() => authEmailInput.focus(), 100);
+                }
+            }
+        });
+    }
+
+    if (authEmailForm) {
+        authEmailForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = (authEmailInput.value || '').trim();
+            const name = (authNameInput.value || '').trim() || email.split('@')[0];
+            if (email) {
+                loginUser({
+                    provider: 'email',
+                    name: name,
+                    email: email
+                });
+            }
+        });
+    }
+
+    // Provider 3: Continue with GitHub
+    if (btnAuthGithub) {
+        btnAuthGithub.addEventListener('click', () => {
+            const githubUser = prompt('Sign in with GitHub - Enter your GitHub username:', 'musculophillee');
+            if (githubUser && githubUser.trim()) {
+                const cleanUser = githubUser.trim();
+                loginUser({
+                    provider: 'github',
+                    name: cleanUser,
+                    email: `${cleanUser}@users.noreply.github.com`
+                });
+            }
+        });
+    }
+
+    // Legal Modals Triggers
+    if (linkOpenUserAgreement) {
+        linkOpenUserAgreement.addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal('modalUserAgreement');
+        });
+    }
+
+    if (linkOpenPrivacyPolicy) {
+        linkOpenPrivacyPolicy.addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal('modalPrivacyPolicy');
+        });
+    }
+
+    // Close user dropdown on outside click
+    document.addEventListener('click', (e) => {
+        if (userDropdownMenu && !userDropdownMenu.contains(e.target) && btnUserMenu && !btnUserMenu.contains(e.target)) {
+            userDropdownMenu.classList.remove('open');
+        }
+    });
+
+    // Initialize Auth UI state on load
+    updateAuthUI();
 
     // Settings Controls
     const settingFontSize = document.getElementById('settingFontSize');

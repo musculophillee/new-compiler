@@ -1959,6 +1959,372 @@ body:has(.codedex-app) {
 }
 
 /* ==========================================================================
+   9.5 AUTHENTICATION & REDDIT-STYLE AUTH MODAL
+   ========================================================================== */
+
+/* Topbar Auth Area */
+.topbar-auth-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.btn-auth-login {
+    height: 32px;
+    padding: 0 12px;
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    border: 1.5px solid var(--color-border);
+    box-shadow: var(--shadow-pixel-xs);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.btn-auth-login:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: var(--shadow-pixel-sm);
+}
+
+.auth-user-dropdown {
+    position: relative;
+}
+
+.auth-user-badge {
+    height: 32px;
+    padding: 0 10px;
+    background: var(--color-bg-elevated);
+    border: 1.5px solid var(--color-border);
+    box-shadow: var(--shadow-pixel-xs);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-fg-main);
+}
+
+.auth-user-badge:hover {
+    background: var(--color-bg-surface);
+}
+
+.auth-user-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    border: 1px solid var(--color-border);
+}
+
+.auth-caret {
+    font-size: 9px;
+    color: var(--color-fg-muted);
+}
+
+/* Zero Compiler Neo-Brutalist Auth Modal */
+.neo-auth-box {
+    max-width: 480px;
+    background: var(--color-bg-elevated);
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-pixel-lg);
+}
+
+.auth-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.auth-header-title h3 {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: var(--color-fg-main);
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.neo-auth-body {
+    padding: 18px 20px 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.auth-banner-callout {
+    background: var(--color-bg-surface);
+    border: 1.5px solid var(--color-border);
+    box-shadow: var(--shadow-pixel-xs);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.auth-banner-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 6px;
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    border: 1px solid var(--color-border);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    width: fit-content;
+}
+
+.auth-banner-heading {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--color-fg-main);
+    margin: 2px 0 0 0;
+    letter-spacing: -0.01em;
+}
+
+.auth-banner-desc {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--color-fg-muted);
+    margin: 0;
+}
+
+.auth-options-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.neo-auth-btn {
+    height: 42px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-pixel);
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.08s ease;
+}
+
+.neo-auth-btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-pixel-lg);
+}
+
+.neo-auth-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow: var(--shadow-pixel-xs);
+}
+
+.neo-auth-icon {
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+/* Specific button themes matching website buttons */
+.neo-auth-btn.btn-google {
+    background: var(--color-bg-elevated);
+    color: var(--color-fg-main);
+}
+
+.neo-auth-btn.btn-google:hover {
+    background: var(--color-bg-hover);
+}
+
+.neo-auth-btn.btn-email {
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+}
+
+.neo-auth-btn.btn-github {
+    background: var(--color-fg-main);
+    color: var(--color-bg-main);
+}
+
+/* Collapsible Form */
+.neo-auth-form {
+    background: var(--color-bg-surface);
+    border: 1.5px solid var(--color-border);
+    box-shadow: var(--shadow-pixel-xs);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.auth-field-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.auth-field-row label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-fg-muted);
+    letter-spacing: 0.06em;
+}
+
+.neo-auth-input {
+    height: 32px;
+    padding: 0 10px;
+    background: var(--color-bg-elevated);
+    border: 1.5px solid var(--color-border);
+    box-shadow: var(--shadow-pixel-xs);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-fg-main);
+}
+
+.neo-auth-input:focus {
+    box-shadow: var(--shadow-pixel);
+}
+
+.btn-auth-submit {
+    height: 34px;
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    border: 1.5px solid var(--color-border);
+    box-shadow: var(--shadow-pixel-xs);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    margin-top: 4px;
+}
+
+.btn-auth-submit:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: var(--shadow-pixel-sm);
+}
+
+/* Legal Footer */
+.neo-auth-legal {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    line-height: 1.6;
+    color: var(--color-fg-muted);
+    text-align: center;
+    padding-top: 12px;
+    border-top: 1px dashed var(--color-border-subtle);
+}
+
+.neo-legal-link {
+    color: var(--color-fg-main);
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+    margin: 0 2px;
+}
+
+.neo-legal-link:hover {
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    text-decoration: none;
+}
+
+/* User Agreement & Privacy Policy Modal Formatting */
+.legal-modal-box {
+    max-width: 640px;
+    border-radius: 4px;
+}
+
+.legal-modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+    font-family: var(--font-sans);
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--color-fg-main);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.legal-intro {
+    font-size: 12px;
+    color: var(--color-fg-muted);
+    border-left: 3px solid var(--color-accent);
+    padding-left: 10px;
+    margin: 0;
+}
+
+.legal-section h4 {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--color-fg-main);
+    margin: 0 0 6px 0;
+    text-transform: uppercase;
+}
+
+.legal-section p {
+    margin: 0 0 6px 0;
+    color: var(--color-fg-main);
+}
+
+.legal-section ul {
+    margin: 4px 0 0 16px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.legal-section li {
+    color: var(--color-fg-main);
+}
+
+.legal-footer-action {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--color-border-subtle);
+}
+
+.modal-close-btn {
+    padding: 8px 18px;
+    font-size: 11.5px;
+    font-weight: 800;
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    border: 1.5px solid var(--color-border);
+    box-shadow: var(--shadow-pixel-xs);
+    cursor: pointer;
+}
+
+/* ==========================================================================
    10. RESPONSIVE (TABLETS & PHONES)
    ========================================================================== */
 
