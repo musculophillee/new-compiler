@@ -781,6 +781,54 @@ body:has(.codedex-app) {
     background: rgba(21, 21, 21, 0.15);
 }
 
+.tab-name {
+    cursor: pointer;
+    border-bottom: 1px dashed transparent;
+    transition: border-color 0.1s ease;
+}
+
+.quest-tab:hover .tab-name {
+    border-bottom-color: var(--color-border-subtle);
+}
+
+.tab-rename-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 9px;
+    opacity: 0.35;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: opacity 0.1s ease, background-color 0.1s ease, color 0.1s ease;
+}
+
+.quest-tab:hover .tab-rename-btn {
+    opacity: 0.85;
+}
+
+.tab-rename-btn:hover {
+    opacity: 1;
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+}
+
+.tab-name-input {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-fg-main);
+    background: var(--color-bg-elevated);
+    border: 1.5px solid var(--color-border);
+    padding: 1px 5px;
+    outline: none;
+    box-shadow: var(--shadow-pixel-xs);
+    width: 95px;
+    height: 20px;
+    box-sizing: border-box;
+}
+
 .btn-add-tab {
     width: 28px;
     height: 28px;

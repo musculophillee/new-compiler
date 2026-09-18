@@ -956,13 +956,100 @@ int main() {
             const langInfo = LANGUAGES[tab.lang] || LANGUAGES.c;
             tabEl.innerHTML = `
                 <span class="tab-badge">${tab.lang.toUpperCase()}</span>
-                <span class="tab-name">${tab.name}</span>
-                ${tabs.length > 1 ? '<span class="tab-close" title="Close Scroll"><i class="fa-solid fa-xmark"></i></span>' : ''}
+                <span class="tab-name" title="Double-click or click ✏️ to rename file">${escapeHtml(tab.name)}</span>
+                <span class="tab-rename-btn" title="Rename File"><i class="fa-solid fa-pen"></i></span>
+                ${tabs.length > 1 ? '<span class="tab-close" title="Close File"><i class="fa-solid fa-xmark"></i></span>' : ''}
             `;
+
+            const tabNameEl = tabEl.querySelector('.tab-name');
+            const renameBtn = tabEl.querySelector('.tab-rename-btn');
+
+            function startRename() {
+                if (tabEl.querySelector('.tab-name-input')) return;
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'tab-name-input';
+                input.value = tab.name;
+                tabNameEl.style.display = 'none';
+                if (renameBtn) renameBtn.style.display = 'none';
+                tabNameEl.parentNode.insertBefore(input, tabNameEl.nextSibling);
+
+                input.focus();
+                const dotIndex = tab.name.lastIndexOf('.');
+                if (dotIndex > 0) {
+                    input.setSelectionRange(0, dotIndex);
+                } else {
+                    input.select();
+                }
+
+                let committed = false;
+                function commit() {
+                    if (committed) return;
+                    committed = true;
+                    let newName = input.value.trim();
+                    if (!newName) newName = tab.name;
+
+                    // Check if file extension was provided or changed
+                    const lastDot = newName.lastIndexOf('.');
+                    if (lastDot === -1 || lastDot === newName.length - 1) {
+                        const ext = LANGUAGES[tab.lang] ? LANGUAGES[tab.lang].ext : '.c';
+                        newName = (lastDot === -1 ? newName : newName.slice(0, -1)) + ext;
+                    } else {
+                        const typedExt = newName.slice(lastDot).toLowerCase();
+                        const matchedLangKey = Object.keys(LANGUAGES).find(k => LANGUAGES[k].ext.toLowerCase() === typedExt);
+                        if (matchedLangKey && matchedLangKey !== tab.lang) {
+                            tab.lang = matchedLangKey;
+                            monaco.editor.setModelLanguage(tab.model, LANGUAGES[matchedLangKey].monacoLang);
+                            if (tab.id === activeTabId) {
+                                currentLang = matchedLangKey;
+                                updateLanguageDisplay(currentLang);
+                            }
+                        }
+                    }
+
+                    tab.name = newName;
+                    renderTabs();
+                    playSound('click');
+                    showToast(`File renamed to ${newName} 📝`);
+                }
+
+                function cancel() {
+                    if (committed) return;
+                    committed = true;
+                    renderTabs();
+                }
+
+                input.addEventListener('keydown', (e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        commit();
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        cancel();
+                    }
+                });
+
+                input.addEventListener('blur', commit);
+            }
+
+            tabNameEl.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                startRename();
+            });
+
+            if (renameBtn) {
+                renameBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    startRename();
+                });
+            }
 
             tabEl.addEventListener('click', (e) => {
                 if (e.target.closest('.tab-close')) {
                     closeTab(tab.id);
+                } else if (e.target.closest('.tab-rename-btn') || e.target.closest('.tab-name-input')) {
+                    // Ignore clicks on rename inputs/buttons
                 } else {
                     switchTab(tab.id);
                 }
@@ -1026,7 +1113,8 @@ int main() {
         const activeTab = tabs.find(t => t.id === activeTabId);
         if (activeTab && editor) {
             activeTab.lang = lang;
-            activeTab.name = `main${LANGUAGES[lang].ext}`;
+            const baseName = activeTab.name.replace(/\.[^/.]+$/, "") || "main";
+            activeTab.name = `${baseName}${LANGUAGES[lang].ext}`;
             const code = getSavedCode(lang) || LANGUAGES[lang].template;
 
             activeTab.model.dispose();
