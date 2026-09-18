@@ -2174,6 +2174,10 @@ int main() {
     const btnPrivyWallet = document.getElementById('btnPrivyWallet');
     const textPrivyWallet = document.getElementById('textPrivyWallet');
 
+    if (btnPrivyWallet && typeof window.ethereum === 'undefined') {
+        btnPrivyWallet.style.display = 'none';
+    }
+
     const btnTogglePrivyConfig = document.getElementById('btnTogglePrivyConfig');
     const privyConfigDrawer = document.getElementById('privyConfigDrawer');
     const iconPrivyChevron = document.getElementById('iconPrivyChevron');
@@ -2277,7 +2281,6 @@ int main() {
         } else {
             pendingAuthAction = actionCallback;
             openModal('modalAuth');
-            switchAuthTab('signin');
             playSound('quack');
             showToast('Sign in to unlock AI Agent diagnostics & 1-click auto-fix ⚡');
         }
@@ -2356,12 +2359,24 @@ int main() {
     }
     verifySession();
 
+    // Cross-tab / cross-page auth state synchronization
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'zero_compiler_token' || e.key === 'zero_compiler_user') {
+            currentToken = localStorage.getItem('zero_compiler_token') || null;
+            try {
+                currentUser = JSON.parse(localStorage.getItem('zero_compiler_user') || 'null');
+            } catch (err) {
+                currentUser = null;
+            }
+            updateAuthUI();
+        }
+    });
+
     if (btnOpenAuthModal) {
         btnOpenAuthModal.addEventListener('click', (e) => {
             e.stopPropagation();
             hideAuthAlert();
             openModal('modalAuth');
-            switchAuthTab('signin');
         });
     }
 
@@ -2425,29 +2440,92 @@ int main() {
         });
     }
 
-    // Popup OAuth PostMessage Listener (Google & GitHub)
-    window.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'ZERO_AUTH_SUCCESS') {
-            const { user, token } = event.data;
-            if (user && token) {
-                loginUser(user, token);
+    // Google Identity Services (GIS) Credential Handler
+    async function handleGoogleCredential(credential) {
+        hideAuthAlert();
+        try {
+            const res = await fetch('/api/auth/oauth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    provider: 'google',
+                    credential: credential
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.success && data.token) {
+                loginUser(data.user, data.token);
+                showToast(`Signed in as ${data.user.name || 'Google User'}! 🚀`);
+            } else {
+                showAuthAlert(data.error || 'Google authentication failed.');
+            }
+        } catch (err) {
+            showAuthAlert('Unable to reach authentication server.');
+        }
+    }
+
+    // Initialize Google One Tap if client ID is configured
+    async function initGoogleIdentity() {
+        let clientId = localStorage.getItem('zero_compiler_google_client_id') || '';
+        if (!clientId) {
+            try {
+                const res = await fetch('/api/auth/config');
+                if (res.ok) {
+                    const cfg = await res.json();
+                    clientId = cfg.google_client_id || '';
+                }
+            } catch (e) {}
+        }
+        if (clientId && window.google && window.google.accounts) {
+            try {
+                window.google.accounts.id.initialize({
+                    client_id: clientId,
+                    callback: (response) => {
+                        if (response.credential) {
+                            handleGoogleCredential(response.credential);
+                        }
+                    },
+                    auto_select: true
+                });
+                window.google.accounts.id.prompt();
+            } catch (e) {
+                console.log('[Google GIS Init]', e);
             }
         }
-    });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initGoogleIdentity);
+    } else {
+        setTimeout(initGoogleIdentity, 400);
+    }
 
-    // 2. Continue with Google (Real Google Sign-In via Privy)
+    // 2. Continue with Google (Real In-Modal 1-Click Google Sign-In)
     if (btnPrivyGoogle) {
         btnPrivyGoogle.addEventListener('click', async () => {
             hideAuthAlert();
             let email = (privyEmailInput ? privyEmailInput.value : '').trim().toLowerCase();
 
-            // If email is not pre-typed, open authentic Google Sign-In popup
+            // If user hasn't typed an email yet, prompt Google One Tap or guide in-modal
             if (!email) {
-                playSound('click');
-                const popup = window.open('/auth/google', 'GoogleSignIn', 'width=460,height=600,top=120,left=200');
-                if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-                    showAuthAlert('Popup blocked. Please enter your email above or allow popups.');
-                    if (privyEmailInput) privyEmailInput.focus();
+                if (window.google && window.google.accounts && window.google.accounts.id) {
+                    try {
+                        window.google.accounts.id.prompt((notification) => {
+                            if (notification.isNotDisplayed()) {
+                                showAuthAlert('Enter your Google email in the field above to connect directly.', 'info');
+                                if (privyEmailInput) {
+                                    privyEmailInput.placeholder = 'your.name@gmail.com';
+                                    privyEmailInput.focus();
+                                }
+                            }
+                        });
+                        return;
+                    } catch (e) {}
+                }
+
+                showAuthAlert('Enter your Google email in the field above to connect directly.', 'info');
+                if (privyEmailInput) {
+                    privyEmailInput.placeholder = 'your.name@gmail.com';
+                    privyEmailInput.focus();
                 }
                 return;
             }
@@ -2466,7 +2544,6 @@ int main() {
             const origHtml = btnPrivyGoogle.innerHTML;
             btnPrivyGoogle.disabled = true;
             btnPrivyGoogle.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Connecting with Google...</span>';
-            playSound('click');
 
             try {
                 const res = await fetch('/api/auth/oauth', {
@@ -2494,19 +2571,17 @@ int main() {
         });
     }
 
-    // 3. Continue with GitHub (Real GitHub Sign-In via Privy)
+    // 3. Continue with GitHub (Real In-Modal 1-Click GitHub Sign-In)
     if (btnPrivyGithub) {
         btnPrivyGithub.addEventListener('click', async () => {
             hideAuthAlert();
             let val = (privyEmailInput ? privyEmailInput.value : '').trim();
 
-            // If username is not pre-typed, open authentic GitHub Sign-In popup
             if (!val) {
-                playSound('click');
-                const popup = window.open('/auth/github', 'GitHubSignIn', 'width=460,height=560,top=120,left=200');
-                if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-                    showAuthAlert('Popup blocked. Please enter your GitHub username or email above.');
-                    if (privyEmailInput) privyEmailInput.focus();
+                showAuthAlert('Enter your GitHub username or email in the field above to connect.', 'info');
+                if (privyEmailInput) {
+                    privyEmailInput.placeholder = 'github-handle or user@domain.com';
+                    privyEmailInput.focus();
                 }
                 return;
             }
@@ -2517,7 +2592,6 @@ int main() {
             const origHtml = btnPrivyGithub.innerHTML;
             btnPrivyGithub.disabled = true;
             btnPrivyGithub.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Connecting with GitHub...</span>';
-            playSound('click');
 
             try {
                 const res = await fetch('/api/auth/oauth', {

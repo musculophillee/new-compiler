@@ -146,10 +146,8 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
             self.handle_health()
         elif self.path.startswith("/api/auth/me"):
             self.handle_auth_me()
-        elif clean_path == "/auth/google":
-            self.handle_google_oauth_page()
-        elif clean_path == "/auth/github":
-            self.handle_github_oauth_page()
+        elif clean_path == "/api/auth/config":
+            self.handle_auth_config()
         elif clean_path in ("/editor", "/compiler"):
             query = "?" + self.path.split('?')[1] if '?' in self.path else ""
             self.path = "/editor.html" + query
@@ -217,6 +215,23 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
             name = payload.get("name")
             provider = payload.get("provider", "google")
             turnstile_token = payload.get("turnstile_token")
+            credential = payload.get("credential")
+
+            # Auto-decode Google Identity Services JWT token if provided
+            if credential and (not email or not name):
+                try:
+                    import base64
+                    jwt_parts = credential.split('.')
+                    if len(jwt_parts) >= 2:
+                        payload_segment = jwt_parts[1]
+                        padded = payload_segment + '=' * (-len(payload_segment) % 4)
+                        jwt_data = json.loads(base64.urlsafe_b64decode(padded).decode('utf-8'))
+                        email = jwt_data.get("email", email)
+                        name = jwt_data.get("name") or jwt_data.get("given_name") or (email.split('@')[0] if email else name)
+                        provider = "google"
+                except Exception as je:
+                    print(f"[Google JWT Decode Warning] {je}")
+
             res = auth_db.oauth_login_or_register(email, name, provider, turnstile_token)
             status = 200 if res.get("success") else 400
             self._send_json(res, status)
@@ -243,340 +258,12 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
         self._send_json({"success": True}, 200)
         log_request("POST", "/api/auth/logout", 200)
 
-    def handle_google_oauth_page(self):
-        html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Sign in with Google — Zero Compiler</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #ffffff;
-            color: #202124;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 24px;
-        }
-        .g-card {
-            border: 1px solid #dadce0;
-            border-radius: 8px;
-            width: 100%;
-            max-width: 440px;
-            padding: 36px 40px;
-            text-align: center;
-        }
-        .g-logo {
-            width: 44px;
-            height: 44px;
-            margin-bottom: 16px;
-        }
-        h1 {
-            font-family: 'Google Sans', 'Roboto', sans-serif;
-            font-size: 24px;
-            font-weight: 500;
-            margin-bottom: 8px;
-            color: #202124;
-        }
-        p.sub {
-            font-size: 15px;
-            color: #5f6368;
-            margin-bottom: 24px;
-        }
-        .input-group {
-            margin-bottom: 16px;
-            text-align: left;
-        }
-        .input-group label {
-            display: block;
-            font-size: 12px;
-            font-weight: 500;
-            color: #5f6368;
-            margin-bottom: 6px;
-            letter-spacing: 0.2px;
-        }
-        .input-group input {
-            width: 100%;
-            height: 48px;
-            border: 1px solid #dadce0;
-            border-radius: 4px;
-            padding: 0 14px;
-            font-size: 15px;
-            color: #202124;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .input-group input:focus {
-            border-color: #1a73e8;
-            box-shadow: 0 0 0 1px #1a73e8;
-        }
-        .btn-continue {
-            width: 100%;
-            height: 44px;
-            background: #1a73e8;
-            color: #ffffff;
-            border: none;
-            border-radius: 4px;
-            font-family: 'Google Sans', 'Roboto', sans-serif;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 8px;
-            transition: background 0.15s, box-shadow 0.15s;
-        }
-        .btn-continue:hover {
-            background: #1557b0;
-            box-shadow: 0 1px 2px rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
-        }
-        .btn-continue:disabled {
-            background: #8ab4f8;
-            cursor: not-allowed;
-        }
-        .alert-error {
-            background: #fce8e6;
-            color: #c5221f;
-            border-radius: 4px;
-            padding: 10px 12px;
-            font-size: 13px;
-            margin-bottom: 16px;
-            text-align: left;
-            display: none;
-        }
-        .footer-note {
-            margin-top: 24px;
-            font-size: 12px;
-            line-height: 1.5;
-            color: #70757a;
-        }
-    </style>
-</head>
-<body>
-    <div class="g-card">
-        <svg class="g-logo" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-        </svg>
-        <h1>Sign in with Google</h1>
-        <p class="sub">to continue to <strong>Zero Compiler</strong></p>
-        <div id="errorAlert" class="alert-error"></div>
-        <form id="googleForm">
-            <div class="input-group">
-                <label for="email">Google Account Email</label>
-                <input type="email" id="email" placeholder="name@gmail.com" required autofocus autocomplete="email">
-            </div>
-            <div class="input-group">
-                <label for="name">Display Name</label>
-                <input type="text" id="name" placeholder="Your Name" autocomplete="name">
-            </div>
-            <button type="submit" id="btnSubmit" class="btn-continue">Next</button>
-        </form>
-        <p class="footer-note">Zero Compiler securely connects your account via Privy & Google Identity Services.</p>
-    </div>
-    <script>
-        document.getElementById('googleForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value.trim();
-            const name = document.getElementById('name').value.trim() || email.split('@')[0];
-            const btn = document.getElementById('btnSubmit');
-            const alert = document.getElementById('errorAlert');
-            alert.style.display = 'none';
-            btn.disabled = true;
-            btn.textContent = 'Verifying with Google...';
-            try {
-                const res = await fetch('/api/auth/oauth', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ provider: 'google', email, name })
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    btn.textContent = 'Authenticated! Connecting...';
-                    if (window.opener) {
-                        window.opener.postMessage({ type: 'ZERO_AUTH_SUCCESS', user: data.user, token: data.token }, '*');
-                    }
-                    setTimeout(() => window.close(), 400);
-                } else {
-                    alert.textContent = data.error || 'Authentication failed.';
-                    alert.style.display = 'block';
-                    btn.disabled = false;
-                    btn.textContent = 'Next';
-                }
-            } catch (err) {
-                alert.textContent = 'Connection error: ' + err.message;
-                alert.style.display = 'block';
-                btn.disabled = false;
-                btn.textContent = 'Next';
-            }
-        });
-    </script>
-</body>
-</html>"""
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.end_headers()
-        self.wfile.write(html.encode("utf-8"))
-
-    def handle_github_oauth_page(self):
-        html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Sign in to GitHub — Zero Compiler</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            background: #0d1117;
-            color: #c9d1d9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 24px;
-        }
-        .gh-card {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            width: 100%;
-            max-width: 380px;
-            padding: 32px;
-            text-align: center;
-        }
-        .gh-logo {
-            width: 48px;
-            height: 48px;
-            fill: #f0f6fc;
-            margin-bottom: 16px;
-        }
-        h1 {
-            font-size: 20px;
-            font-weight: 400;
-            margin-bottom: 20px;
-            color: #f0f6fc;
-        }
-        .input-group {
-            margin-bottom: 16px;
-            text-align: left;
-        }
-        .input-group label {
-            display: block;
-            font-size: 13px;
-            color: #f0f6fc;
-            margin-bottom: 6px;
-        }
-        .input-group input {
-            width: 100%;
-            height: 38px;
-            background: #0d1117;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            padding: 0 12px;
-            font-size: 14px;
-            color: #c9d1d9;
-            outline: none;
-        }
-        .input-group input:focus {
-            border-color: #58a6ff;
-            box-shadow: 0 0 0 1px #58a6ff;
-        }
-        .btn-gh {
-            width: 100%;
-            height: 38px;
-            background: #238636;
-            color: #ffffff;
-            border: 1px solid rgba(240,246,252,0.1);
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 8px;
-        }
-        .btn-gh:hover { background: #2ea043; }
-        .btn-gh:disabled { opacity: 0.6; cursor: not-allowed; }
-        .alert-error {
-            background: rgba(248,81,73,0.15);
-            color: #f85149;
-            border: 1px solid rgba(248,81,73,0.4);
-            border-radius: 6px;
-            padding: 8px 12px;
-            font-size: 12px;
-            margin-bottom: 14px;
-            text-align: left;
-            display: none;
-        }
-    </style>
-</head>
-<body>
-    <div class="gh-card">
-        <svg class="gh-logo" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-        <h1>Sign in to GitHub</h1>
-        <div id="errorAlert" class="alert-error"></div>
-        <form id="ghForm">
-            <div class="input-group">
-                <label for="username">Username or Email Address</label>
-                <input type="text" id="username" placeholder="octocat or you@domain.com" required autofocus>
-            </div>
-            <button type="submit" id="btnSubmit" class="btn-gh">Sign in</button>
-        </form>
-    </div>
-    <script>
-        document.getElementById('ghForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const val = document.getElementById('username').value.trim();
-            const email = val.includes('@') ? val.toLowerCase() : (val.toLowerCase().replace(/[^a-z0-9_-]/g, '') + '@users.noreply.github.com');
-            const name = val.split('@')[0];
-            const btn = document.getElementById('btnSubmit');
-            const alert = document.getElementById('errorAlert');
-            alert.style.display = 'none';
-            btn.disabled = true;
-            btn.textContent = 'Connecting...';
-            try {
-                const res = await fetch('/api/auth/oauth', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ provider: 'github', email, name })
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    btn.textContent = 'Authorized! Redirecting...';
-                    if (window.opener) {
-                        window.opener.postMessage({ type: 'ZERO_AUTH_SUCCESS', user: data.user, token: data.token }, '*');
-                    }
-                    setTimeout(() => window.close(), 400);
-                } else {
-                    alert.textContent = data.error || 'Authentication failed.';
-                    alert.style.display = 'block';
-                    btn.disabled = false;
-                    btn.textContent = 'Sign in';
-                }
-            } catch (err) {
-                alert.textContent = 'Connection error: ' + err.message;
-                alert.style.display = 'block';
-                btn.disabled = false;
-                btn.textContent = 'Sign in';
-            }
-        });
-    </script>
-</body>
-</html>"""
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.end_headers()
-        self.wfile.write(html.encode("utf-8"))
+    def handle_auth_config(self):
+        self._send_json({
+            "google_client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
+            "privy_app_id": os.environ.get("PRIVY_APP_ID", "")
+        }, 200)
+        log_request("GET", "/api/auth/config", 200)
 
     def handle_health(self):
         compilers = {
