@@ -91,20 +91,23 @@
     <header class="home-hero">
         <div class="home-container hero-inner">
             
-            <!-- Floating Pixel Tag -->
-            <div class="hero-tag-badge">
-                <span class="pulse-dot-green"></span>
-                <span>ZERO-CONFIG CLOUD COMPILER & RUNTIME</span>
+            <!-- Interactive Hero Brand Centerpiece (Tactile Cyber Matrix & Parallax Core) -->
+            <div class="hero-centerpiece-wrapper" id="heroCenterpieceWrapper">
+                <canvas class="hero-particle-canvas" id="heroParticleCanvas" width="800" height="260" aria-hidden="true"></canvas>
+
+                <div class="hero-brand-centerpiece" id="heroInteractiveLogo" role="banner" aria-label="Zero Compiler">
+                    <div class="hero-pixel-mark-interactive" id="heroPixelMark" title="Click squares to toggle colors, double-click to scatter!" role="group" aria-label="Interactive Pixel Logo">
+                        <button type="button" class="hero-pixel-sq sq-1" data-index="0" aria-label="Pixel 1 (Top Left)"></button>
+                        <button type="button" class="hero-pixel-sq sq-2 active-lime" data-index="1" aria-label="Pixel 2 (Top Right)"></button>
+                        <button type="button" class="hero-pixel-sq sq-3" data-index="2" aria-label="Pixel 3 (Bottom Left)"></button>
+                        <button type="button" class="hero-pixel-sq sq-4" data-index="3" aria-label="Pixel 4 (Bottom Right)"></button>
+                    </div>
+                    <div class="hero-brand-text-group">
+                        <h1 class="hero-brand-title" id="heroBrandTitle" data-value="Zero" title="Hover to decode / Click for bass drop">Zero</h1>
+                        <button type="button" class="hero-brand-badge-interactive" id="heroBrandBadge" title="Zero Compiler" aria-label="Zero Compiler Edition">COMPILER</button>
+                    </div>
+                </div>
             </div>
-
-            <!-- Big Headline with Darryl Neo-Brutalist Framing -->
-            <h1 class="hero-title">
-                Code online with <span class="highlight-box">Zero Compiler.</span>
-            </h1>
-
-            <p class="hero-subtitle">
-                Zero Compiler helps developers, learners, and coders worldwide write, run, and AI-debug code online for free with instant execution and full multi-arch diagnostics.
-            </p>
 
             <!-- Search Bar -->
             <div class="hero-search-wrapper">

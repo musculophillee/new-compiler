@@ -65,6 +65,310 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ===== 3.1 Interactive Hero Brand Logo (Tactile Pixels, 3D Parallax & Cyber Audio) =====
+    const heroWrapper = document.getElementById('heroCenterpieceWrapper');
+    const heroLogo = document.getElementById('heroInteractiveLogo');
+    const pixelMark = document.getElementById('heroPixelMark');
+    const pixelSquares = document.querySelectorAll('.hero-pixel-sq');
+    const heroBrandBadge = document.getElementById('heroBrandBadge');
+    const heroBrandTitle = document.getElementById('heroBrandTitle');
+    const particleCanvas = document.getElementById('heroParticleCanvas');
+
+    // Musical Notes
+    const pixelNotes = [440, 554.37, 659.25, 880]; // A4, C#5, E5, A5 (A Major)
+    const colorCycle = ['', 'active-lime', 'active-cyan', 'active-pink'];
+
+    function playSynthTone(frequency, type = 'square', duration = 0.12, startGain = 0.05) {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(frequency, ctx.currentTime);
+
+            gain.gain.setValueAtTime(startGain, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start();
+            osc.stop(ctx.currentTime + duration);
+        } catch (e) {
+            // Audio context safely ignored if restricted
+        }
+    }
+
+    // Play 808 Sub-bass Drop
+    function playBassDrop() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(140, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(32, ctx.currentTime + 0.35);
+
+            gain.gain.setValueAtTime(0.08, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start();
+            osc.stop(ctx.currentTime + 0.35);
+        } catch (e) {}
+    }
+
+    // Canvas Particle Sparks System
+    let particles = [];
+    let pCtx = null;
+    let animId = null;
+
+    if (particleCanvas) {
+        pCtx = particleCanvas.getContext('2d');
+        particleCanvas.width = 800;
+        particleCanvas.height = 260;
+
+        class PixelSpark {
+            constructor(x, y, color = null) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 5 + 3;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 5 + 2;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.life = 1;
+                this.decay = Math.random() * 0.03 + 0.015;
+                const palette = ['#d7ff3f', '#00f0ff', '#ff2e88', '#ffffff'];
+                this.color = color || palette[Math.floor(Math.random() * palette.length)];
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.08;
+                this.vx *= 0.98;
+                this.life -= this.decay;
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.restore();
+            }
+        }
+
+        function emitSparks(count = 25, originX = 400, originY = 130, color = null) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new PixelSpark(originX, originY, color));
+            }
+            if (!animId) loopParticles();
+        }
+
+        function loopParticles() {
+            if (!pCtx) return;
+            pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw(pCtx);
+                if (particles[i].life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+            if (particles.length > 0) {
+                animId = requestAnimationFrame(loopParticles);
+            } else {
+                animId = null;
+            }
+        }
+
+        // Ambient gentle sparks occasionally
+        setInterval(() => {
+            if (particles.length < 5 && Math.random() > 0.4) {
+                const rx = 350 + Math.random() * 100;
+                const ry = 110 + Math.random() * 40;
+                emitSparks(2, rx, ry);
+            }
+        }, 1200);
+    }
+
+    // 1. 3D Parallax Tilt with Mouse Tracking
+    if (heroWrapper && heroLogo) {
+        let isHovered = false;
+
+        heroWrapper.addEventListener('mouseenter', () => { isHovered = true; });
+        heroWrapper.addEventListener('mouseleave', () => {
+            isHovered = false;
+            heroLogo.style.transform = 'perspective(1200px) rotateX(0deg) rotateY(0deg) translate3d(0, 0, 0)';
+        });
+
+        heroWrapper.addEventListener('mousemove', (e) => {
+            if (!isHovered) return;
+            const rect = heroWrapper.getBoundingClientRect();
+            const x = e.clientX - rect.left - rect.width / 2;
+            const y = e.clientY - rect.top - rect.height / 2;
+
+            const tiltX = (y / (rect.height / 2)) * -9;
+            const tiltY = (x / (rect.width / 2)) * 9;
+
+            heroLogo.style.transform = `perspective(1200px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translate3d(${x * 0.03}px, ${y * 0.03}px, 12px)`;
+        });
+    }
+
+    // 2. Interactive Pixel Squares (Color Cycling + Note Synth + Sparks)
+    if (pixelSquares.length > 0) {
+        pixelSquares.forEach((sq, idx) => {
+            let currentClassIdx = sq.classList.contains('active-lime') ? 1 : 0;
+
+            sq.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                colorCycle.forEach(cls => { if (cls) sq.classList.remove(cls); });
+                currentClassIdx = (currentClassIdx + 1) % colorCycle.length;
+                if (colorCycle[currentClassIdx]) {
+                    sq.classList.add(colorCycle[currentClassIdx]);
+                }
+
+                playSynthTone(pixelNotes[idx % pixelNotes.length], 'square', 0.14);
+
+                if (particleCanvas && typeof emitSparks === 'function') {
+                    const rect = particleCanvas.getBoundingClientRect();
+                    const sqRect = sq.getBoundingClientRect();
+                    const sparkX = sqRect.left + sqRect.width / 2 - rect.left;
+                    const sparkY = sqRect.top + sqRect.height / 2 - rect.top;
+                    emitSparks(14, sparkX, sparkY);
+                }
+
+                sq.style.transform = 'scale(0.85)';
+                setTimeout(() => { sq.style.transform = ''; }, 120);
+            });
+        });
+    }
+
+    // 3. Kinetic Scatter & Snap Physics for Pixel Matrix
+    if (pixelMark) {
+        let isScattered = false;
+        function triggerScatterBurst() {
+            if (isScattered) return;
+            isScattered = true;
+            pixelMark.classList.add('scattered');
+            playSynthTone(1200, 'sawtooth', 0.08, 0.06);
+
+            if (particleCanvas && typeof emitSparks === 'function') {
+                const rect = particleCanvas.getBoundingClientRect();
+                const pmRect = pixelMark.getBoundingClientRect();
+                emitSparks(28, pmRect.left + pmRect.width / 2 - rect.left, pmRect.top + pmRect.height / 2 - rect.top);
+            }
+
+            setTimeout(() => {
+                pixelMark.classList.remove('scattered');
+                playSynthTone(587.33, 'triangle', 0.18, 0.05);
+                isScattered = false;
+            }, 360);
+        }
+
+        pixelMark.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            triggerScatterBurst();
+        });
+    }
+
+    // 4. Cyber Scramble / Decoder on "Zero"
+    if (heroBrandTitle) {
+        const originalText = heroBrandTitle.dataset.value || 'Zero';
+        const glyphs = '01ZΞRØX9#!⚡<>[]{}';
+        let scrambleInterval = null;
+
+        function runScramble() {
+            let iteration = 0;
+            clearInterval(scrambleInterval);
+            heroBrandTitle.classList.add('glitching');
+
+            scrambleInterval = setInterval(() => {
+                heroBrandTitle.innerText = originalText
+                    .split('')
+                    .map((char, index) => {
+                        if (index < iteration) return originalText[index];
+                        return glyphs[Math.floor(Math.random() * glyphs.length)];
+                    })
+                    .join('');
+
+                if (iteration >= originalText.length) {
+                    clearInterval(scrambleInterval);
+                    heroBrandTitle.classList.remove('glitching');
+                    heroBrandTitle.innerText = originalText;
+                }
+                iteration += 1 / 3;
+            }, 30);
+        }
+
+        heroBrandTitle.addEventListener('mouseenter', () => {
+            runScramble();
+            playSynthTone(750, 'sine', 0.05, 0.02);
+        });
+
+        heroBrandTitle.addEventListener('click', () => {
+            playBassDrop();
+            runScramble();
+            if (particleCanvas && typeof emitSparks === 'function') {
+                const rect = particleCanvas.getBoundingClientRect();
+                const tRect = heroBrandTitle.getBoundingClientRect();
+                emitSparks(30, tRect.left + tRect.width / 2 - rect.left, tRect.top + tRect.height / 2 - rect.top, '#d7ff3f');
+            }
+        });
+    }
+
+    // 5. Overclock Mode ("HYPER-DRIVE ⚡") on COMPILER Badge
+    let isOverclocked = false;
+    if (heroBrandBadge) {
+        heroBrandBadge.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (isOverclocked) return;
+            isOverclocked = true;
+
+            if (heroWrapper) heroWrapper.classList.add('overclocked');
+
+            // Power-up triumphant cyber arpeggio
+            const arpeggioNotes = [261.63, 329.63, 392.00, 493.88, 523.25, 659.25, 783.99, 1046.50];
+            arpeggioNotes.forEach((freq, idx) => {
+                setTimeout(() => {
+                    playSynthTone(freq, 'sawtooth', 0.18, 0.045);
+                }, idx * 55);
+            });
+
+            // Big particle explosion
+            if (particleCanvas && typeof emitSparks === 'function') {
+                const rect = particleCanvas.getBoundingClientRect();
+                const bRect = heroBrandBadge.getBoundingClientRect();
+                emitSparks(60, bRect.left + bRect.width / 2 - rect.left, bRect.top + bRect.height / 2 - rect.top);
+            }
+
+            // Scatter and pulse pixels
+            pixelSquares.forEach((sq, i) => {
+                setTimeout(() => {
+                    sq.style.transform = 'scale(1.3) rotate(25deg)';
+                    setTimeout(() => { sq.style.transform = ''; }, 180);
+                }, i * 75);
+            });
+
+            // Cool-down after 3.5s
+            setTimeout(() => {
+                if (heroWrapper) heroWrapper.classList.remove('overclocked');
+                playSynthTone(220, 'sine', 0.35, 0.03);
+                isOverclocked = false;
+            }, 3500);
+        });
+    }
+
     // ===== 4. Authentication & User Management (Synced with Editor) =====
     let currentUser = null;
     let currentToken = localStorage.getItem('zero_compiler_token') || null;
