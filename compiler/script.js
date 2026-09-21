@@ -2375,8 +2375,19 @@ int main() {
         playSound('success');
         showToast(`Welcome back, ${currentUser.name || 'Developer'}! 🚀`);
 
+        // Reset in-memory saved code tracking so saves are never blocked
+        _lastSavedCode = {};
+
+        // If drawer is currently open showing history, refresh it for this user
+        if (sideDrawer && sideDrawer.style.display !== 'none') {
+            const drawerTitle = document.getElementById('drawerTitle');
+            if (drawerTitle && drawerTitle.textContent.includes('HISTORY')) {
+                renderHistoryList();
+            }
+        }
+
         // Restore latest cloud code session after login
-        setTimeout(() => restoreLatestCloudCode(), 600);
+        setTimeout(() => restoreLatestCloudCode(), 400);
 
         if (pendingAuthAction) {
             const action = pendingAuthAction;
@@ -2392,10 +2403,15 @@ int main() {
         // Immediate local state reset
         currentUser = null;
         currentToken = null;
+        _lastSavedCode = {};
         localStorage.removeItem('zero_compiler_user');
         localStorage.removeItem('zero_compiler_token');
         if (userDropdownMenu) userDropdownMenu.classList.remove('open');
         if (authUserDropdown) authUserDropdown.classList.remove('open');
+        if (sideDrawer && sideDrawer.style.display !== 'none') {
+            sideDrawer.style.display = 'none';
+        }
+        updateCloudSyncStatus('offline', 'Sign in to save');
         updateAuthUI();
         playSound('click');
         showToast('Signed out of Zero Compiler 👋');
@@ -2598,9 +2614,37 @@ int main() {
 
     async function getAuth0Client() {
         if (auth0Client) return auth0Client;
+
+        // Wait up to 3.5s if SDK is still initializing
+        if (typeof auth0 === 'undefined' || !auth0.createAuth0Client) {
+            for (let i = 0; i < 35; i++) {
+                if (typeof auth0 !== 'undefined' && auth0.createAuth0Client) break;
+                await new Promise(r => setTimeout(r, 100));
+            }
+        }
+
+        // If still missing, dynamically inject the local bundle or CDN fallback
+        if (typeof auth0 === 'undefined' || !auth0.createAuth0Client) {
+            await new Promise((resolve) => {
+                const s = document.createElement('script');
+                s.src = '/auth0-spa-js.production.js';
+                s.onload = () => resolve();
+                s.onerror = () => {
+                    const fallback = document.createElement('script');
+                    fallback.src = 'https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js';
+                    fallback.onload = () => resolve();
+                    fallback.onerror = () => resolve();
+                    document.head.appendChild(fallback);
+                };
+                document.head.appendChild(s);
+                setTimeout(resolve, 3000);
+            });
+        }
+
         if (typeof auth0 === 'undefined' || !auth0.createAuth0Client) {
             return null;
         }
+
         try {
             auth0Client = await auth0.createAuth0Client({
                 domain: AUTH0_CONFIG.domain,
@@ -3073,35 +3117,75 @@ int main() {
             try { return JSON.parse(localStorage.getItem('zero_compiler_user') || 'null'); } catch(e) { return null; }
         })();
         if (!token || !user || !editor) return;
+
         try {
-            const res = await fetch(`/api/code/latest?language=${currentLang}`, {
+            // 1. Check if user has saved code for the currently selected language
+            let res = await fetch(`/api/code/latest?language=${currentLang}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!res.ok) return;
-            const data = await res.json();
-            if (data.success && data.snippet && data.snippet.code) {
-                const localCode = editor.getValue();
+            let data = res.ok ? await res.json() : null;
+
+            // 2. If no snippet for current language, check if user has ANY recent cloud session across languages
+            if (!data || !data.snippet) {
+                res = await fetch('/api/code/latest', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                data = res.ok ? await res.json() : null;
+            }
+
+            if (data && data.success && data.snippet && data.snippet.code) {
+                const snippet = data.snippet;
+                // Switch language tab if the snippet belongs to another language
+                if (snippet.language && snippet.language !== currentLang && LANGUAGES[snippet.language]) {
+                    switchLanguage(snippet.language);
+                }
+                editor.setValue(snippet.code);
+                saveCode(snippet.language || currentLang, snippet.code);
+                _lastSavedCode[snippet.language || currentLang] = snippet.code;
+                updateCloudSyncStatus('saved', '✓ Cloud Synced');
+                showToast(`☁️ Restored work: ${snippet.title || snippet.language}`);
+                setTimeout(() => updateCloudSyncStatus('saved', 'Saved'), 3000);
+            } else {
+                // If this user account has no saved cloud code yet, but there is active custom code in the editor,
+                // auto-save the current code to this user account so work is immediately safe!
+                const currentCode = editor.getValue();
                 const templateCode = LANGUAGES[currentLang] && LANGUAGES[currentLang].template;
-                // Only restore if editor still has template/default code or is empty
-                const isDefault = !localCode || localCode.trim() === '' ||
-                    (templateCode && localCode.trim() === templateCode.trim());
-                if (isDefault) {
-                    editor.setValue(data.snippet.code);
-                    saveCode(currentLang, data.snippet.code);
-                    updateCloudSyncStatus('saved', '\u2713 Session Restored');
-                    showToast(`\u2601\ufe0f Session restored: ${data.snippet.title || currentLang}`);
-                    setTimeout(() => updateCloudSyncStatus('saved', 'Saved'), 3000);
+                const hasCustomCode = currentCode && currentCode.trim().length > 0 &&
+                    (!templateCode || currentCode.trim() !== templateCode.trim());
+                if (hasCustomCode) {
+                    performCloudSave(true);
                 } else {
-                    updateCloudSyncStatus('saved', 'Saved');
+                    updateCloudSyncStatus('saved', 'Cloud Ready');
                 }
             }
         } catch (e) {
-            // Silent fail — don't disrupt UX
+            console.warn('[RestoreCloudCode] Error:', e);
         }
     }
 
     function renderHistoryList() {
         if (!drawerContent) return;
+        const token = currentToken || localStorage.getItem('zero_compiler_token');
+        if (!token) {
+            drawerContent.innerHTML = `
+                <div class="history-empty" style="padding: 40px 16px; text-align: center;">
+                    <div style="font-size: 2.2rem; margin-bottom: 12px;">🔒</div>
+                    <div style="font-family: 'Press Start 2P', monospace; font-size: 0.75rem; margin-bottom: 8px;">SIGN IN REQUIRED</div>
+                    <p style="font-size: 0.8rem; color: #666; margin-bottom: 16px; line-height: 1.4;">Sign in to view your auto-saved code and cloud snapshots.</p>
+                    <button class="arcade-btn" id="btnHistoryDrawerLogin" style="padding: 8px 18px; font-weight: 700; cursor: pointer; background: var(--color-primary, #b7e4c7); border: 2px solid #000; box-shadow: 2px 2px 0 #000;">
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i> SIGN IN NOW
+                    </button>
+                </div>
+            `;
+            const btn = drawerContent.querySelector('#btnHistoryDrawerLogin');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    openModal('modalAuth');
+                });
+            }
+            return;
+        }
+
         drawerContent.innerHTML = `
             <div style="padding: 0 4px 12px;">
                 <input type="text" class="history-search-input" id="historySearchInput" placeholder="🔍 Search by title or language..." />
@@ -3115,7 +3199,11 @@ int main() {
                     <button class="filter-chip" data-filter="javascript">JS</button>
                 </div>
             </div>
-            <div id="historyCardsContainer">Loading history...</div>
+            <div id="historyCardsContainer">
+                <div style="text-align: center; padding: 24px 0; color: #666;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Loading your cloud history...
+                </div>
+            </div>
         `;
 
         const searchInput = drawerContent.querySelector('#historySearchInput');
@@ -3128,7 +3216,7 @@ int main() {
         // Attach search handler
         if (searchInput) {
             searchInput.addEventListener('input', () => {
-                searchQuery = searchInput.value.toLowerCase();
+                searchQuery = searchInput.value.toLowerCase().trim();
                 filterAndRenderCards(allHistory, container, activeFilter, searchQuery);
             });
         }
@@ -3145,24 +3233,52 @@ int main() {
 
         // Load history from server
         fetch('/api/code/history', {
-            headers: { 'Authorization': `Bearer ${currentToken}` }
+            headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(res => res.json())
         .then(data => {
-            if (data.success && data.history) {
+            if (data.success && Array.isArray(data.history)) {
                 allHistory = data.history;
                 filterAndRenderCards(allHistory, container, activeFilter, searchQuery);
             } else {
-                container.innerHTML = `<div class="history-empty"><i class="fa-solid fa-cloud-slash"></i><p>No history found. Start coding to autosave!</p></div>`;
+                container.innerHTML = `<div class="history-empty"><i class="fa-solid fa-cloud-slash"></i><p>${data.error || 'No history found.'}</p></div>`;
             }
         })
         .catch(() => {
-            container.innerHTML = `<div class="history-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>Could not load history. Is the server running?</p></div>`;
+            container.innerHTML = `<div class="history-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>Could not load history. Please check server connection.</p></div>`;
         });
     }
 
     function filterAndRenderCards(history, container, filter, query) {
         if (!container) return;
+
+        // If user has zero cloud saves yet on this account
+        if (!history || history.length === 0) {
+            container.innerHTML = `
+                <div class="history-empty" style="padding: 28px 12px; text-align: center;">
+                    <div style="font-size: 2.2rem; margin-bottom: 8px;">☁️</div>
+                    <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; letter-spacing: 0.5px;">NO SAVED WORK YET</div>
+                    <p style="font-size: 0.8rem; color: #666; margin-bottom: 14px; line-height: 1.4;">
+                        Your code automatically syncs to the cloud whenever you edit. You can also save your current work right now.
+                    </p>
+                    <button class="arcade-btn" id="btnSaveCurrentToHistory" style="padding: 8px 16px; font-size: 0.8rem; font-weight: 700; cursor: pointer; background: var(--color-primary, #b7e4c7); border: 2px solid #000; box-shadow: 2px 2px 0 #000;">
+                        <i class="fa-solid fa-floppy-disk"></i> SAVE CURRENT CODE NOW
+                    </button>
+                </div>
+            `;
+            const saveBtn = container.querySelector('#btnSaveCurrentToHistory');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', async () => {
+                    saveBtn.disabled = true;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+                    await performCloudSave(false, `${LANGUAGES[currentLang].name} Session`);
+                    playSound('success');
+                    renderHistoryList();
+                });
+            }
+            return;
+        }
+
         let filtered = history;
 
         // Apply language/type filter
@@ -3183,7 +3299,27 @@ int main() {
         }
 
         if (!filtered.length) {
-            container.innerHTML = `<div class="history-empty"><i class="fa-solid fa-magnifying-glass"></i><p>No results found.</p></div>`;
+            container.innerHTML = `
+                <div class="history-empty" style="padding: 24px 12px; text-align: center;">
+                    <i class="fa-solid fa-magnifying-glass" style="font-size: 1.8rem; margin-bottom: 8px; color: #888;"></i>
+                    <p style="margin-bottom: 10px;">No saved code matches your search filter.</p>
+                    <button class="filter-chip active" id="btnResetHistoryFilter" style="margin: 0 auto; cursor: pointer;">
+                        Show All (${history.length})
+                    </button>
+                </div>
+            `;
+            const resetBtn = container.querySelector('#btnResetHistoryFilter');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    const chips = drawerContent.querySelectorAll('.filter-chip');
+                    chips.forEach(c => c.classList.remove('active'));
+                    const allChip = drawerContent.querySelector('.filter-chip[data-filter="all"]');
+                    if (allChip) allChip.classList.add('active');
+                    const sInput = drawerContent.querySelector('#historySearchInput');
+                    if (sInput) sInput.value = '';
+                    filterAndRenderCards(history, container, 'all', '');
+                });
+            }
             return;
         }
 
@@ -3234,11 +3370,12 @@ int main() {
             card.querySelector('.btn-history-rename').addEventListener('click', () => {
                 const newTitle = prompt('Enter new name for this save:', snippet.title || 'Untitled');
                 if (!newTitle || !newTitle.trim()) return;
+                const token = currentToken || localStorage.getItem('zero_compiler_token');
                 fetch('/api/code/rename', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentToken}`
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({ id: snippet.id, title: newTitle.trim() })
                 }).then(r => r.json()).then(d => {
@@ -3255,11 +3392,12 @@ int main() {
             // Delete button
             card.querySelector('.btn-history-delete').addEventListener('click', () => {
                 if (!confirm(`Delete "${snippet.title || 'this save'}"?`)) return;
+                const token = currentToken || localStorage.getItem('zero_compiler_token');
                 fetch('/api/code/delete', {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentToken}`
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({ id: snippet.id })
                 }).then(r => r.json()).then(d => {

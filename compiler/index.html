@@ -18,8 +18,13 @@
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <!-- Official Google Identity Services (Detects active browser Google session) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <!-- Auth0 Single Page App SDK -->
-    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
+    <!-- Auth0 Single Page App SDK (Local first, CDN fallback) -->
+    <script src="/auth0-spa-js.production.js"></script>
+    <script>
+        if (typeof auth0 === 'undefined') {
+            document.write('<script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"><\/script>');
+        }
+    </script>
 </head>
 <body class="home-page">
 

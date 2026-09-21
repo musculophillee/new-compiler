@@ -444,9 +444,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function getAuth0Client() {
         if (auth0Client) return auth0Client;
+
+        // Wait up to 3.5s if SDK is still initializing
+        if (typeof auth0 === 'undefined' || !auth0.createAuth0Client) {
+            for (let i = 0; i < 35; i++) {
+                if (typeof auth0 !== 'undefined' && auth0.createAuth0Client) break;
+                await new Promise(r => setTimeout(r, 100));
+            }
+        }
+
+        // If still missing, dynamically inject the local bundle or CDN fallback
+        if (typeof auth0 === 'undefined' || !auth0.createAuth0Client) {
+            await new Promise((resolve) => {
+                const s = document.createElement('script');
+                s.src = '/auth0-spa-js.production.js';
+                s.onload = () => resolve();
+                s.onerror = () => {
+                    const fallback = document.createElement('script');
+                    fallback.src = 'https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js';
+                    fallback.onload = () => resolve();
+                    fallback.onerror = () => resolve();
+                    document.head.appendChild(fallback);
+                };
+                document.head.appendChild(s);
+                setTimeout(resolve, 3000);
+            });
+        }
+
         if (typeof auth0 === 'undefined' || !auth0.createAuth0Client) {
             return null;
         }
+
         try {
             auth0Client = await auth0.createAuth0Client({
                 domain: AUTH0_CONFIG.domain,
