@@ -40,19 +40,11 @@
     },
     {
       "source": "/editor",
-      "destination": "/compiler/editor.html"
+      "destination": "/editor.html"
     },
     {
       "source": "/compiler",
-      "destination": "/compiler/editor.html"
-    },
-    {
-      "source": "/",
-      "destination": "/compiler/index.html"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/compiler/$1"
+      "destination": "/editor.html"
     }
   ]
 }
