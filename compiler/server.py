@@ -261,7 +261,9 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
     def handle_auth_config(self):
         self._send_json({
             "google_client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
-            "privy_app_id": os.environ.get("PRIVY_APP_ID", "")
+            "privy_app_id": os.environ.get("PRIVY_APP_ID", ""),
+            "auth0_domain": os.environ.get("AUTH0_DOMAIN", "musculophilleee.us.auth0.com"),
+            "auth0_client_id": os.environ.get("AUTH0_CLIENT_ID", "oyDtE33Pu5lUfOTYB0U0ZFx5vMp26yUr")
         }, 200)
         log_request("GET", "/api/auth/config", 200)
 

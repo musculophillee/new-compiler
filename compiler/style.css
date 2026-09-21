@@ -2609,6 +2609,17 @@ body:has(.codedex-app) {
     background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
 }
 
+.btn-auth0 {
+    background: #eb5424;
+    color: #ffffff;
+    border-color: #d64215;
+}
+
+.btn-auth0:hover {
+    background: #d64215;
+    color: #ffffff;
+}
+
 /* Privy Config Accordion */
 .privy-config-accordion {
     margin-top: 2px;

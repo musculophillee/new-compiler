@@ -2,6 +2,18 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "https://new-compiler.onrender.com/api/$1"
+    },
+    {
+      "source": "/editor",
+      "destination": "/compiler/editor.html"
+    },
+    {
+      "source": "/compiler",
+      "destination": "/compiler/editor.html"
+    },
+    {
       "source": "/",
       "destination": "/compiler/index.html"
     },

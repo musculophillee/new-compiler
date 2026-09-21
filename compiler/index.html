@@ -18,6 +18,8 @@
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <!-- Official Google Identity Services (Detects active browser Google session) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Auth0 Single Page App SDK -->
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 </head>
 <body class="home-page">
 
@@ -705,6 +707,13 @@
 
                     <!-- 1-Click Privy Web3 & Social Buttons -->
                     <div class="privy-social-stack">
+                        <button type="button" class="arcade-btn privy-btn btn-auth0" id="btnAuth0LoginHome" title="Continue with Auth0 / Okta">
+                            <svg class="privy-icon" viewBox="0 0 32 32" width="18" height="18" fill="none">
+                                <path d="M16 2.5L5.5 6.4v8.8c0 7.3 4.5 14.1 10.5 16.3 6-2.2 10.5-9 10.5-16.3V6.4L16 2.5z" fill="#EB5424"/>
+                                <path d="M16 7l6.5 2.4v5.5c0 4.6-2.8 8.8-6.5 10.2V7z" fill="#FFFFFF" fill-opacity="0.9"/>
+                            </svg>
+                            <span id="textAuth0LoginHome">CONTINUE WITH AUTH0 / OKTA</span>
+                        </button>
                         <button type="button" class="arcade-btn privy-btn btn-privy-google" id="btnPrivyGoogle" title="Continue with Google">
                             <svg class="privy-icon" viewBox="0 0 24 24" width="18" height="18">
                                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

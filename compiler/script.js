@@ -2335,6 +2335,17 @@ int main() {
                 });
             } catch (e) {}
         }
+
+        if (auth0Client) {
+            try {
+                const isAuth = await auth0Client.isAuthenticated();
+                if (isAuth) {
+                    await auth0Client.logout({
+                        logoutParams: { returnTo: window.location.origin }
+                    });
+                }
+            } catch (e) {}
+        }
     }
 
     // Verify session on page load
@@ -2497,6 +2508,125 @@ int main() {
         document.addEventListener('DOMContentLoaded', initGoogleIdentity);
     } else {
         setTimeout(initGoogleIdentity, 400);
+    }
+
+    // ===== Auth0 / Okta Integration =====
+    const AUTH0_CONFIG = {
+        domain: 'musculophilleee.us.auth0.com',
+        clientId: 'oyDtE33Pu5lUfOTYB0U0ZFx5vMp26yUr'
+    };
+    let auth0Client = null;
+
+    async function getAuth0Client() {
+        if (auth0Client) return auth0Client;
+        if (typeof auth0 === 'undefined' || !auth0.createAuth0Client) {
+            return null;
+        }
+        try {
+            auth0Client = await auth0.createAuth0Client({
+                domain: AUTH0_CONFIG.domain,
+                clientId: AUTH0_CONFIG.clientId,
+                authorizationParams: {
+                    redirect_uri: window.location.origin + window.location.pathname
+                },
+                cacheLocation: 'localstorage',
+                useRefreshTokens: true
+            });
+            return auth0Client;
+        } catch (err) {
+            console.warn('[Auth0 Init]', err);
+            return null;
+        }
+    }
+
+    async function syncAuth0User(auth0User) {
+        if (!auth0User) return;
+        try {
+            const email = auth0User.email || `${auth0User.nickname || 'user'}@auth0.user`;
+            const name = auth0User.name || auth0User.nickname || (email.includes('@') ? email.split('@')[0] : 'Developer');
+            const res = await fetch('/api/auth/oauth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    provider: 'auth0',
+                    email: email,
+                    name: name,
+                    turnstile_token: '1x00000000000000000000BB'
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.success && data.token) {
+                loginUser(data.user, data.token);
+                playSound('success');
+                showToast(`Signed in with Auth0 as ${data.user.name}! 🚀`);
+            } else {
+                showAuthAlert(data.error || 'Failed to authenticate with Auth0.');
+            }
+        } catch (err) {
+            console.error('[Auth0 Sync Error]', err);
+            showAuthAlert('Unable to sync Auth0 login with server.');
+        }
+    }
+
+    async function handleAuth0Callback() {
+        const query = window.location.search;
+        if (query.includes('code=') && query.includes('state=')) {
+            const client = await getAuth0Client();
+            if (client) {
+                try {
+                    await client.handleRedirectCallback();
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    const user = await client.getUser();
+                    if (user) {
+                        await syncAuth0User(user);
+                    }
+                } catch (err) {
+                    console.error('[Auth0 Callback Error]', err);
+                }
+            }
+        }
+    }
+    handleAuth0Callback();
+
+    const btnAuth0LoginEditor = document.getElementById('btnAuth0LoginEditor');
+    if (btnAuth0LoginEditor) {
+        btnAuth0LoginEditor.addEventListener('click', async () => {
+            hideAuthAlert();
+            const origHtml = btnAuth0LoginEditor.innerHTML;
+            btnAuth0LoginEditor.disabled = true;
+            btnAuth0LoginEditor.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Connecting to Auth0...</span>';
+
+            const client = await getAuth0Client();
+            if (!client) {
+                showAuthAlert('Auth0 SDK is still loading. Please check your internet connection.');
+                btnAuth0LoginEditor.disabled = false;
+                btnAuth0LoginEditor.innerHTML = origHtml;
+                return;
+            }
+
+            try {
+                await client.loginWithPopup();
+                const user = await client.getUser();
+                if (user) {
+                    await syncAuth0User(user);
+                }
+            } catch (popupErr) {
+                if (popupErr && (popupErr.error === 'popup_closed' || popupErr.message === 'Popup closed')) {
+                    btnAuth0LoginEditor.disabled = false;
+                    btnAuth0LoginEditor.innerHTML = origHtml;
+                    return;
+                }
+                console.warn('[Auth0 Popup fallback to redirect]', popupErr);
+                try {
+                    await client.loginWithRedirect();
+                } catch (redirectErr) {
+                    showAuthAlert(`Auth0 Login Failed: ${redirectErr.message || redirectErr}`);
+                }
+            } finally {
+                btnAuth0LoginEditor.disabled = false;
+                btnAuth0LoginEditor.innerHTML = origHtml;
+            }
+        });
     }
 
     // 2. Continue with Google (Real In-Modal 1-Click Google Sign-In)
