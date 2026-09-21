@@ -15,7 +15,7 @@
    ========================================================================== */
 
 :root,
-[data-theme="darryl-cream"] {
+html[data-theme="darryl-cream"] {
     --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'DM Mono', 'JetBrains Mono', Consolas, monospace;
@@ -59,7 +59,7 @@
 }
 
 /* 🖤 Darryl Carbon (Dark Obsidian Mode) */
-[data-theme="darryl-carbon"] {
+html[data-theme="darryl-carbon"] {
     --color-bg-main: #0c0e12;
     --color-bg-surface: #13161c;
     --color-bg-elevated: #1a1d24;
@@ -90,92 +90,6 @@
     --shadow-pixel-lg: 6px 6px 0px #040507;
 }
 
-/* 🔮 Cyberpunk Void */
-[data-theme="darryl-cyberpunk"] {
-    --color-bg-main: #0b0813;
-    --color-bg-surface: #130f21;
-    --color-bg-elevated: #1e1735;
-    --color-bg-hover: #2a204a;
-
-    --color-fg-main: #f0e6ff;
-    --color-fg-muted: #a494c4;
-    --color-fg-subtle: #6c5f85;
-
-    --color-border: #ff007f;
-    --color-border-subtle: #3a225c;
-    --color-border-strong: #ff007f;
-
-    --color-accent: #00ffcc;
-    --color-accent-soft: #00382d;
-    --color-accent-fg: #0b0813;
-
-    --color-console-bg: #07050d;
-    --color-console-fg: #00ffcc;
-    --color-console-text: #e0d7ff;
-
-    --shadow-pixel-xs: 2px 2px 0px #ff007f;
-    --shadow-pixel-sm: 3px 3px 0px #ff007f;
-    --shadow-pixel: 4px 4px 0px #ff007f;
-    --shadow-pixel-lg: 6px 6px 0px #000000;
-}
-
-/* 🟩 Matrix Terminal */
-[data-theme="darryl-matrix"] {
-    --color-bg-main: #040d06;
-    --color-bg-surface: #0a180d;
-    --color-bg-elevated: #0f2615;
-    --color-bg-hover: #16361e;
-
-    --color-fg-main: #b8fbc8;
-    --color-fg-muted: #5e9e6c;
-    --color-fg-subtle: #3b6645;
-
-    --color-border: #00ff41;
-    --color-border-subtle: #133a1d;
-    --color-border-strong: #00ff41;
-
-    --color-accent: #00ff41;
-    --color-accent-soft: #063812;
-    --color-accent-fg: #040d06;
-
-    --color-console-bg: #020703;
-    --color-console-fg: #00ff41;
-    --color-console-text: #b8fbc8;
-
-    --shadow-pixel-xs: 2px 2px 0px #00ff41;
-    --shadow-pixel-sm: 3px 3px 0px #00ff41;
-    --shadow-pixel: 4px 4px 0px #00ff41;
-    --shadow-pixel-lg: 6px 6px 0px #000000;
-}
-
-/* 🌸 Brutalist Bubblegum */
-[data-theme="darryl-bubblegum"] {
-    --color-bg-main: #fef0f5;
-    --color-bg-surface: #fbe0ed;
-    --color-bg-elevated: #ffffff;
-    --color-bg-hover: #f7c9e0;
-
-    --color-fg-main: #1f141b;
-    --color-fg-muted: #826678;
-    --color-fg-subtle: #bda3b3;
-
-    --color-border: #1f141b;
-    --color-border-subtle: #eec2d9;
-    --color-border-strong: #1f141b;
-
-    --color-accent: #ff60a8;
-    --color-accent-soft: #ffd6ea;
-    --color-accent-fg: #ffffff;
-
-    --color-console-bg: #1a1017;
-    --color-console-fg: #ff60a8;
-    --color-console-text: #fef0f5;
-
-    --shadow-pixel-xs: 2px 2px 0px #1f141b;
-    --shadow-pixel-sm: 3px 3px 0px #1f141b;
-    --shadow-pixel: 4px 4px 0px #1f141b;
-    --shadow-pixel-lg: 6px 6px 0px #1f141b;
-}
 
 /* ==========================================================================
    2. GLOBAL RESET & BASE GRID LAYOUT
@@ -538,6 +452,145 @@ body:has(.codedex-app) {
 
 .dropdown-item.active .item-badge {
     color: var(--color-accent-fg);
+}
+
+/* Theme Palette Dropdown Specific Styling */
+#themeDropdownMenu {
+    min-width: 230px;
+    padding: 6px;
+    background: var(--color-bg-elevated);
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-pixel-lg);
+}
+
+#themeDropdownMenu .dropdown-header {
+    color: var(--color-fg-muted);
+    border-bottom: 1px solid var(--color-border-subtle);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    padding: 4px 8px 6px 8px;
+    margin-bottom: 4px;
+}
+
+#themeDropdownMenu .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-fg-main);
+    background: transparent;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+#themeDropdownMenu .dropdown-item .theme-icon {
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+}
+
+#themeDropdownMenu .dropdown-item:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-border);
+    color: var(--color-fg-main);
+}
+
+#themeDropdownMenu .dropdown-item.active {
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    border-color: var(--color-border);
+    font-weight: 800;
+}
+
+/* 🖤 Darryl Carbon - High-Contrast Dark Mode Overrides */
+html[data-theme="darryl-carbon"] #themeDropdownMenu {
+    background: #13161c;
+    border-color: #2e3340;
+    box-shadow: 4px 4px 0px #040507;
+}
+
+html[data-theme="darryl-carbon"] #themeDropdownMenu .dropdown-header {
+    color: #9ba1b0;
+    border-bottom-color: #2e3340;
+}
+
+html[data-theme="darryl-carbon"] #themeDropdownMenu .dropdown-item {
+    color: #f5f6f8;
+    background: transparent;
+}
+
+html[data-theme="darryl-carbon"] #themeDropdownMenu .dropdown-item:hover {
+    background: #1a1d24;
+    border-color: #42495b;
+    color: #ffffff;
+}
+
+html[data-theme="darryl-carbon"] #themeDropdownMenu .dropdown-item.active {
+    background: #d7ff3f;
+    color: #0c0e12;
+    border-color: #d7ff3f;
+    font-weight: 800;
+}
+
+/* High-contrast Topbar Buttons in Dark Mode */
+html[data-theme="darryl-carbon"] .arcade-btn.btn-duck-ai {
+    background: #1a1d24;
+    color: #d7ff3f;
+    border-color: #3b4252;
+}
+
+html[data-theme="darryl-carbon"] .arcade-btn.btn-duck-ai:hover {
+    background: #252a34;
+    color: #ffffff;
+    border-color: #d7ff3f;
+}
+
+html[data-theme="darryl-carbon"] .arcade-btn.btn-mini {
+    background: #1a1d24;
+    color: #f5f6f8;
+    border-color: #2e3340;
+}
+
+html[data-theme="darryl-carbon"] .arcade-btn.btn-mini:hover {
+    background: #242832;
+    border-color: #42495b;
+}
+
+html[data-theme="darryl-carbon"] .arcade-btn.btn-fix-neon {
+    background: #1a1d24;
+    color: #fbbf24;
+    border-color: #2e3340;
+}
+
+html[data-theme="darryl-carbon"] .arcade-btn.btn-fix-neon:hover {
+    background: #242832;
+    color: #fde047;
+    border-color: #fbbf24;
+}
+
+html[data-theme="darryl-carbon"] .arcade-btn.btn-icon-round {
+    background: #1a1d24;
+    color: #f5f6f8;
+    border-color: #2e3340;
+}
+
+html[data-theme="darryl-carbon"] .arcade-btn.btn-icon-round:hover {
+    background: #242832;
+    border-color: #42495b;
+}
+
+html[data-theme="darryl-carbon"] .arcade-btn.btn-icon-round.active {
+    background: #d7ff3f;
+    color: #0c0e12;
+    border-color: #d7ff3f;
 }
 
 .pixel-dot {
@@ -2556,9 +2609,7 @@ body:has(.codedex-app) {
     border-color: #cf222e;
 }
 
-[data-theme="terminal-dark"] .neo-auth-alert.error,
-[data-theme="cyber-slate"] .neo-auth-alert.error,
-[data-theme="dracula"] .neo-auth-alert.error {
+[data-theme="darryl-carbon"] .neo-auth-alert.error {
     background: rgba(255, 68, 68, 0.15);
     color: #ff6b6b;
     border-color: #ff6b6b;

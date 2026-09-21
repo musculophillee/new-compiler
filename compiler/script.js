@@ -163,8 +163,8 @@ int main() {
     let editor = null;
     let currentLang = 'c';
     let currentTheme = localStorage.getItem('codedex_theme') || 'darryl-cream';
-    const legacyThemes = ['codedex-dark', 'codedex-meadow', 'codedex-dungeon', 'theme-gameboy', 'theme-synthwave', 'theme-lava', 'theme-lofi', 'theme-bubblegum', 'pixel-gameboy', 'pixel-nordic'];
-    if (legacyThemes.includes(currentTheme)) {
+    const validThemes = ['darryl-cream', 'darryl-carbon'];
+    if (!validThemes.includes(currentTheme)) {
         currentTheme = 'darryl-cream';
         localStorage.setItem('codedex_theme', 'darryl-cream');
     }
@@ -327,256 +327,6 @@ int main() {
                 'editor.lineHighlightBackground': '#1e1e1e',
                 'editorGutter.background': '#151515',
                 'editorCursor.foreground': '#d7ff3f'
-            }
-        });
-
-        // 🔮 Cyberpunk Void (Deep Obsidian + Electric Yellow + Cyan)
-        monaco.editor.defineTheme('darryl-cyberpunk', {
-            base: 'vs-dark',
-            inherit: true,
-            rules: [
-                { token: 'keyword', foreground: 'ffff00', fontStyle: 'bold' },
-                { token: 'string', foreground: 'ff007f' },
-                { token: 'number', foreground: '00f0ff' },
-                { token: 'comment', foreground: '5c5c7a', fontStyle: 'italic' },
-                { token: 'type', foreground: '00f0ff', fontStyle: 'bold' },
-                { token: 'function', foreground: 'ffff00' },
-                { token: 'delimiter', foreground: 'ffffff' }
-            ],
-            colors: {
-                'editor.background': '#0e0e14',
-                'editor.foreground': '#f0f0ff',
-                'editorLineNumber.foreground': '#44445a',
-                'editorLineNumber.activeForeground': '#ffff00',
-                'editor.selectionBackground': '#2a2a3e',
-                'editor.lineHighlightBackground': '#181824',
-                'editorGutter.background': '#0e0e14',
-                'editorCursor.foreground': '#00f0ff'
-            }
-        });
-
-        // 🟩 Matrix Terminal
-        monaco.editor.defineTheme('darryl-matrix', {
-            base: 'vs-dark',
-            inherit: true,
-            rules: [
-                { token: 'keyword', foreground: '39ff14', fontStyle: 'bold' },
-                { token: 'string', foreground: '86efac' },
-                { token: 'number', foreground: '4ade80' },
-                { token: 'comment', foreground: '166534', fontStyle: 'italic' },
-                { token: 'type', foreground: '22c55e', fontStyle: 'bold' },
-                { token: 'function', foreground: '39ff14' },
-                { token: 'delimiter', foreground: 'bbf7d0' }
-            ],
-            colors: {
-                'editor.background': '#090d0b',
-                'editor.foreground': '#86efac',
-                'editorLineNumber.foreground': '#14532d',
-                'editorLineNumber.activeForeground': '#39ff14',
-                'editor.selectionBackground': '#14532d',
-                'editor.lineHighlightBackground': '#0f1712',
-                'editorGutter.background': '#090d0b',
-                'editorCursor.foreground': '#39ff14'
-            }
-        });
-
-        // 🌸 Brutalist Bubblegum
-        monaco.editor.defineTheme('darryl-bubblegum', {
-            base: 'vs',
-            inherit: true,
-            rules: [
-                { token: 'keyword', foreground: 'ff2a55', fontStyle: 'bold' },
-                { token: 'string', foreground: '0284c7' },
-                { token: 'number', foreground: '16a34a' },
-                { token: 'comment', foreground: '94a3b8', fontStyle: 'italic' },
-                { token: 'type', foreground: '9333ea', fontStyle: 'bold' },
-                { token: 'function', foreground: 'ff2a55' },
-                { token: 'delimiter', foreground: '1e293b' }
-            ],
-            colors: {
-                'editor.background': '#faf7f2',
-                'editor.foreground': '#1e293b',
-                'editorLineNumber.foreground': '#cbd5e1',
-                'editorLineNumber.activeForeground': '#ff2a55',
-                'editor.selectionBackground': '#ffe4e6',
-                'editor.lineHighlightBackground': '#f1ebe2',
-                'editorGutter.background': '#faf7f2',
-                'editorCursor.foreground': '#ff2a55'
-            }
-        });
-
-        // 🌌 Celeste Dusk (Celestial Twilight / Dreamy Violet & Starlight)
-        monaco.editor.defineTheme('pixel-twilight', {
-            base: 'vs-dark',
-            inherit: true,
-            rules: [
-                { token: 'keyword', foreground: 'c4a7e7', fontStyle: 'bold' },
-                { token: 'string', foreground: 'f6c177' },
-                { token: 'number', foreground: '9ccfd8' },
-                { token: 'comment', foreground: '6f6990', fontStyle: 'italic' },
-                { token: 'type', foreground: 'eb6f92' },
-                { token: 'function', foreground: '9ccfd8' },
-                { token: 'delimiter', foreground: 'dcd8f3' }
-            ],
-            colors: {
-                'editor.background': '#181726',
-                'editor.foreground': '#dcd8f3',
-                'editorLineNumber.foreground': '#4a476e',
-                'editorLineNumber.activeForeground': '#f6c177',
-                'editor.selectionBackground': '#312f4d',
-                'editor.lineHighlightBackground': '#201f33',
-                'editorGutter.background': '#141320',
-                'editorCursor.foreground': '#f6c177'
-            }
-        });
-
-        // 🌲 Stardew Valley (Moss Garden / Botanical Earth)
-        monaco.editor.defineTheme('pixel-botanical', {
-            base: 'vs-dark',
-            inherit: true,
-            rules: [
-                { token: 'keyword', foreground: '81b29a', fontStyle: 'bold' },
-                { token: 'string', foreground: 'e9c46a' },
-                { token: 'number', foreground: '8ecae6' },
-                { token: 'comment', foreground: '697c6f', fontStyle: 'italic' },
-                { token: 'type', foreground: 'b5838d' },
-                { token: 'function', foreground: '70a083' },
-                { token: 'delimiter', foreground: 'e4ece6' }
-            ],
-            colors: {
-                'editor.background': '#171e19',
-                'editor.foreground': '#e4ece6',
-                'editorLineNumber.foreground': '#3f5244',
-                'editorLineNumber.activeForeground': '#e9c46a',
-                'editor.selectionBackground': '#2a382e',
-                'editor.lineHighlightBackground': '#1d2720',
-                'editorGutter.background': '#121713',
-                'editorCursor.foreground': '#e9c46a'
-            }
-        });
-
-        // ☕ Coffee Talk (Lo-Fi Roast / Warm Espresso Café)
-        monaco.editor.defineTheme('pixel-lofi', {
-            base: 'vs-dark',
-            inherit: true,
-            rules: [
-                { token: 'keyword', foreground: 'd4a373', fontStyle: 'bold' },
-                { token: 'string', foreground: 'e9d8a6' },
-                { token: 'number', foreground: '81b29a' },
-                { token: 'comment', foreground: '867669', fontStyle: 'italic' },
-                { token: 'type', foreground: 'b5838d' },
-                { token: 'function', foreground: 'c07a60' },
-                { token: 'delimiter', foreground: 'f4ebe1' }
-            ],
-            colors: {
-                'editor.background': '#1d1715',
-                'editor.foreground': '#f4ebe1',
-                'editorLineNumber.foreground': '#50413a',
-                'editorLineNumber.activeForeground': '#e9d8a6',
-                'editor.selectionBackground': '#3b2f29',
-                'editor.lineHighlightBackground': '#261f1c',
-                'editorGutter.background': '#15100f',
-                'editorCursor.foreground': '#e9d8a6'
-            }
-        });
-
-        // 🌸 Studio Ghibli (Aesthetic Rice Linen / Sakura Light Mode)
-        monaco.editor.defineTheme('pixel-sakura', {
-            base: 'vs',
-            inherit: true,
-            rules: [
-                { token: 'keyword', foreground: 'd47a88', fontStyle: 'bold' },
-                { token: 'string', foreground: 'ca8a32' },
-                { token: 'number', foreground: '4d849e' },
-                { token: 'comment', foreground: '9b8e85', fontStyle: 'italic' },
-                { token: 'type', foreground: '9b6a9c' },
-                { token: 'function', foreground: '528a70' },
-                { token: 'delimiter', foreground: '342e2b' }
-            ],
-            colors: {
-                'editor.background': '#faf6f0',
-                'editor.foreground': '#342e2b',
-                'editorLineNumber.foreground': '#bfb2a0',
-                'editorLineNumber.activeForeground': '#342e2b',
-                'editor.selectionBackground': '#e8ded1',
-                'editor.lineHighlightBackground': '#f3ece2',
-                'editorGutter.background': '#f4eee5',
-                'editorCursor.foreground': '#d47a88'
-            }
-        });
-
-        // 🔮 Hyper Light (Vapor Mirage / Synth Dusk)
-        monaco.editor.defineTheme('pixel-synthdusk', {
-            base: 'vs-dark',
-            inherit: true,
-            rules: [
-                { token: 'keyword', foreground: 'ad88e6', fontStyle: 'bold' },
-                { token: 'string', foreground: 'f4cb7e' },
-                { token: 'number', foreground: '7ac5cd' },
-                { token: 'comment', foreground: '756c8f', fontStyle: 'italic' },
-                { token: 'type', foreground: 'e07a9b' },
-                { token: 'function', foreground: '7ac5cd' },
-                { token: 'delimiter', foreground: 'e9e4f5' }
-            ],
-            colors: {
-                'editor.background': '#161426',
-                'editor.foreground': '#e9e4f5',
-                'editorLineNumber.foreground': '#493f77',
-                'editorLineNumber.activeForeground': '#f4cb7e',
-                'editor.selectionBackground': '#2f2a50',
-                'editor.lineHighlightBackground': '#1e1b34',
-                'editorGutter.background': '#110f1e',
-                'editorCursor.foreground': '#f4cb7e'
-            }
-        });
-
-        // ❄️ Nordic Fjord (Polar Aurora / Frosted Slate)
-        monaco.editor.defineTheme('pixel-nordic', {
-            base: 'vs-dark',
-            inherit: true,
-            rules: [
-                { token: 'keyword', foreground: '7ec4cf', fontStyle: 'bold' },
-                { token: 'string', foreground: 'e7c77c' },
-                { token: 'number', foreground: '74b397' },
-                { token: 'comment', foreground: '65798e', fontStyle: 'italic' },
-                { token: 'type', foreground: '9d8dc7' },
-                { token: 'function', foreground: '7ec4cf' },
-                { token: 'delimiter', foreground: 'e2e9f0' }
-            ],
-            colors: {
-                'editor.background': '#161d25',
-                'editor.foreground': '#e2e9f0',
-                'editorLineNumber.foreground': '#3b4e63',
-                'editorLineNumber.activeForeground': '#e7c77c',
-                'editor.selectionBackground': '#263443',
-                'editor.lineHighlightBackground': '#1d2631',
-                'editorGutter.background': '#11161d',
-                'editorCursor.foreground': '#e7c77c'
-            }
-        });
-
-        // 🕹️ Game Boy Pocket (Authentic Muted Olive 1989)
-        monaco.editor.defineTheme('pixel-gameboy', {
-            base: 'vs-dark',
-            inherit: true,
-            rules: [
-                { token: 'keyword', foreground: '8bac0f', fontStyle: 'bold' },
-                { token: 'string', foreground: 'cad86a' },
-                { token: 'number', foreground: '7fa08d' },
-                { token: 'comment', foreground: '6b7d5d', fontStyle: 'italic' },
-                { token: 'type', foreground: '8bac0f' },
-                { token: 'function', foreground: 'cad86a' },
-                { token: 'delimiter', foreground: 'd8e6c8' }
-            ],
-            colors: {
-                'editor.background': '#24301e',
-                'editor.foreground': '#d8e6c8',
-                'editorLineNumber.foreground': '#556d47',
-                'editorLineNumber.activeForeground': '#cad86a',
-                'editor.selectionBackground': '#35472b',
-                'editor.lineHighlightBackground': '#2b3a24',
-                'editorGutter.background': '#1b2416',
-                'editorCursor.foreground': '#cad86a'
             }
         });
 
@@ -1185,36 +935,18 @@ int main() {
         if (editor) {
             const monacoThemeMap = {
                 'darryl-cream': 'darryl-cream',
-                'darryl-carbon': 'darryl-carbon',
-                'darryl-cyberpunk': 'darryl-cyberpunk',
-                'darryl-matrix': 'darryl-matrix',
-                'darryl-bubblegum': 'darryl-bubblegum',
-                'pixel-twilight': 'pixel-twilight',
-                'pixel-botanical': 'pixel-botanical',
-                'pixel-lofi': 'pixel-lofi',
-                'pixel-sakura': 'pixel-sakura',
-                'pixel-synthdusk': 'pixel-synthdusk',
-                'pixel-nordic': 'pixel-nordic',
-                'pixel-gameboy': 'pixel-gameboy'
+                'darryl-carbon': 'darryl-carbon'
             };
             monaco.editor.setTheme(monacoThemeMap[theme] || 'darryl-cream');
         }
 
         const themeLabels = {
-            'darryl-cream': 'Darryl Cream (Default)',
-            'darryl-carbon': 'Darryl Carbon (Dark)',
-            'darryl-cyberpunk': 'Darryl Cyberpunk',
-            'darryl-matrix': 'Darryl Matrix',
-            'darryl-bubblegum': 'Darryl Bubblegum',
-            'pixel-twilight': 'Celeste Dusk',
-            'pixel-botanical': 'Stardew Moss',
-            'pixel-lofi': 'Coffee Talk Espresso',
-            'pixel-sakura': 'Ghibli Linen (Light)',
-            'pixel-synthdusk': 'Hyper Light Synth',
-            'pixel-nordic': 'Nordic Aurora',
-            'pixel-gameboy': 'Game Boy Pocket 1989'
+            'darryl-cream': 'White Theme (Cream)',
+            'darryl-carbon': 'Black Theme (Carbon)'
         };
-        sbThemeName.textContent = themeLabels[theme] || 'Darryl Cream';
+        if (sbThemeName) {
+            sbThemeName.textContent = themeLabels[theme] || 'White Theme';
+        }
 
         document.querySelectorAll('#themeDropdownMenu .dropdown-item').forEach(item => {
             item.classList.toggle('active', item.getAttribute('data-theme') === theme);
@@ -2618,6 +2350,21 @@ int main() {
             for (let i = 0; i < 35; i++) {
                 if (typeof auth0 !== 'undefined' && auth0.createAuth0Client) break;
                 await new Promise(r => setTimeout(r, 100));
+            }
+        }
+
+        // Check if AMD loader registered auth0 as a module
+        if (typeof auth0 === 'undefined' || !auth0.createAuth0Client) {
+            if (typeof window.require === 'function') {
+                try {
+                    await new Promise(r => {
+                        window.require(['/auth0-spa-js.production.js'], mod => {
+                            if (mod && mod.createAuth0Client) window.auth0 = mod;
+                            r();
+                        }, () => r());
+                        setTimeout(r, 600);
+                    });
+                } catch (e) {}
             }
         }
 

@@ -13,8 +13,10 @@
     <!-- Font Awesome Icons (Non-Blocking) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
-    <link rel="stylesheet" href="style.css?v=4.0.0">
-    <script src="theme.js"></script>
+    <link rel="stylesheet" href="style.css?v=4.0.3">
+    <script src="theme.js?v=4.0.3"></script>
+    <!-- Auth0 Single Page App SDK -->
+    <script src="auth0-spa-js.production.js?v=4.0.3"></script>
     <!-- Monaco Editor Loader -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
     <!-- Canvas Confetti for Level-Up Celebrations -->
@@ -23,8 +25,6 @@
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <!-- Official Google Identity Services (Detects active browser Google session) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <!-- Auth0 Single Page App SDK (Non-Blocking Deferred) -->
-    <script src="/auth0-spa-js.production.js" defer></script>
 </head>
 <body>
     <div class="codedex-app">
@@ -141,23 +141,11 @@
                         <div class="dropdown-header">02 // VISUAL PALETTE</div>
                         <div class="dropdown-item active" data-theme="darryl-cream">
                             <span class="theme-icon">⚡</span>
-                            <span>Darryl Cream (Signature)</span>
+                            <span>White (Darryl Cream)</span>
                         </div>
                         <div class="dropdown-item" data-theme="darryl-carbon">
                             <span class="theme-icon">🖤</span>
-                            <span>Darryl Carbon (Dark)</span>
-                        </div>
-                        <div class="dropdown-item" data-theme="darryl-cyberpunk">
-                            <span class="theme-icon">🔮</span>
-                            <span>Cyberpunk Void</span>
-                        </div>
-                        <div class="dropdown-item" data-theme="darryl-matrix">
-                            <span class="theme-icon">🟩</span>
-                            <span>Matrix Terminal</span>
-                        </div>
-                        <div class="dropdown-item" data-theme="darryl-bubblegum">
-                            <span class="theme-icon">🌸</span>
-                            <span>Brutalist Bubblegum</span>
+                            <span>Black (Darryl Carbon)</span>
                         </div>
                     </div>
                 </div>
@@ -757,6 +745,6 @@
     <!-- Toast Banner -->
     <div class="retro-toast" id="toast"></div>
 
-    <script src="script.js?v=4.0.0"></script>
+    <script src="script.js?v=4.0.3"></script>
 </body>
 </html>
