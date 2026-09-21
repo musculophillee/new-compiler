@@ -438,6 +438,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     let auth0Client = null;
 
+    function getHomeRedirectUri() {
+        return window.location.origin + '/';
+    }
+
     async function getAuth0Client() {
         if (auth0Client) return auth0Client;
         if (typeof auth0 === 'undefined' || !auth0.createAuth0Client) {
@@ -448,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 domain: AUTH0_CONFIG.domain,
                 clientId: AUTH0_CONFIG.clientId,
                 authorizationParams: {
-                    redirect_uri: window.location.origin + window.location.pathname
+                    redirect_uri: getHomeRedirectUri()
                 },
                 cacheLocation: 'localstorage',
                 useRefreshTokens: true
@@ -463,6 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function syncAuth0User(auth0User) {
         if (!auth0User) return;
         try {
+            console.log('[Auth0 Sync] Syncing user profile:', auth0User);
             const email = auth0User.email || `${auth0User.nickname || 'user'}@auth0.user`;
             const name = auth0User.name || auth0User.nickname || (email.includes('@') ? email.split('@')[0] : 'Developer');
             const res = await fetch('/api/auth/oauth', {
@@ -477,36 +482,81 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json();
             if (res.ok && data.success && data.token) {
+                console.log('[Auth0 Sync] Server login success:', data.user);
                 loginUser(data.user, data.token);
+                updateAuthUI();
                 showToast(`Signed in with Auth0 as ${data.user.name}! 🚀`);
             } else {
+                console.error('[Auth0 Sync] Server error:', data);
+                openModal('modalAuth');
                 showAuthAlert(data.error || 'Failed to authenticate with Auth0.');
             }
         } catch (err) {
             console.error('[Auth0 Sync Error]', err);
+            openModal('modalAuth');
             showAuthAlert('Unable to sync Auth0 login with server.');
         }
     }
 
-    async function handleAuth0Callback() {
+    async function checkAuth0Session() {
         const query = window.location.search;
+        if (query.includes('error=')) {
+            const params = new URLSearchParams(window.location.search);
+            const errDesc = params.get('error_description') || params.get('error');
+            console.error('[Auth0 Error]', errDesc);
+            window.history.replaceState({}, document.title, window.location.pathname);
+            showToast(`Sign-In: ${errDesc}`);
+            openModal('modalAuth');
+            showAuthAlert(`Sign-In Error: ${errDesc}`);
+            return;
+        }
+
+        const client = await getAuth0Client();
+        if (!client) return;
+
         if (query.includes('code=') && query.includes('state=')) {
-            const client = await getAuth0Client();
-            if (client) {
-                try {
-                    await client.handleRedirectCallback();
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    const user = await client.getUser();
-                    if (user) {
-                        await syncAuth0User(user);
-                    }
-                } catch (err) {
-                    console.error('[Auth0 Callback Error]', err);
+            try {
+                showToast('Finalizing secure sign-in... ⚡');
+                console.log('[Auth0] Exchanging authorization code for tokens...');
+                await client.handleRedirectCallback();
+                console.log('[Auth0] Callback processed successfully.');
+                const user = await client.getUser();
+                console.log('[Auth0] Retrieved user:', user);
+                if (user) {
+                    await syncAuth0User(user);
+                    return;
+                } else {
+                    console.warn('[Auth0] getUser() returned no profile.');
+                    showToast('Could not load user profile from Auth0.');
                 }
+            } catch (err) {
+                console.error('[Auth0 Callback Error]', err);
+                const msg = err.message || String(err);
+                if (msg.includes('Unauthorized') || msg.includes('access_denied')) {
+                    showToast('Auth0 Error: Unauthorized (Check Token Auth Method in Auth0)');
+                    openModal('modalAuth');
+                    showAuthAlert('Auth0 Error: Unauthorized. In your Auth0 Dashboard > Applications > Settings, ensure Application Type is "Single Page App" or Token Endpoint Authentication Method is set to "None".');
+                } else {
+                    showToast(`Auth0 Error: ${msg}`);
+                    openModal('modalAuth');
+                    showAuthAlert(`Auth0 Error: ${msg}`);
+                }
+            } finally {
+                window.history.replaceState({}, document.title, window.location.pathname);
             }
         }
+
+        try {
+            const isAuth = await client.isAuthenticated();
+            if (isAuth && !currentUser) {
+                const user = await client.getUser();
+                if (user) {
+                    await syncAuth0User(user);
+                }
+            }
+        } catch (e) {}
     }
-    handleAuth0Callback();
+    checkAuth0Session();
 
     const btnAuth0LoginHome = document.getElementById('btnAuth0LoginHome');
     if (btnAuth0LoginHome) {
@@ -525,24 +575,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                await client.loginWithPopup();
-                const user = await client.getUser();
-                if (user) {
-                    await syncAuth0User(user);
-                }
-            } catch (popupErr) {
-                if (popupErr && (popupErr.error === 'popup_closed' || popupErr.message === 'Popup closed')) {
-                    btnAuth0LoginHome.disabled = false;
-                    btnAuth0LoginHome.innerHTML = origHtml;
-                    return;
-                }
-                console.warn('[Auth0 Popup fallback to redirect]', popupErr);
-                try {
-                    await client.loginWithRedirect();
-                } catch (redirectErr) {
-                    showAuthAlert(`Auth0 Login Failed: ${redirectErr.message || redirectErr}`);
-                }
-            } finally {
+                await client.loginWithRedirect({
+                    authorizationParams: {
+                        redirect_uri: getHomeRedirectUri()
+                    }
+                });
+            } catch (err) {
+                showAuthAlert(`Auth0 Login Failed: ${err.message || err}`);
                 btnAuth0LoginHome.disabled = false;
                 btnAuth0LoginHome.innerHTML = origHtml;
             }
@@ -554,7 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const origHtml = btnElement ? btnElement.innerHTML : '';
         if (btnElement) {
             btnElement.disabled = true;
-            btnElement.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Connecting with ${serviceName}...</span>`;
+            btnElement.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Redirecting to ${serviceName}...</span>`;
         }
 
         const client = await getAuth0Client();
@@ -568,34 +607,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            await client.loginWithPopup({
+            await client.loginWithRedirect({
                 authorizationParams: {
-                    connection: connectionName
+                    connection: connectionName,
+                    redirect_uri: getHomeRedirectUri()
                 }
             });
-            const user = await client.getUser();
-            if (user) {
-                await syncAuth0User(user);
-            }
-        } catch (popupErr) {
-            if (popupErr && (popupErr.error === 'popup_closed' || popupErr.message === 'Popup closed')) {
-                if (btnElement) {
-                    btnElement.disabled = false;
-                    btnElement.innerHTML = origHtml;
-                }
-                return;
-            }
-            console.warn(`[Auth0 ${serviceName} popup fallback to redirect]`, popupErr);
-            try {
-                await client.loginWithRedirect({
-                    authorizationParams: {
-                        connection: connectionName
-                    }
-                });
-            } catch (redirectErr) {
-                showAuthAlert(`${serviceName} Sign-In: ${redirectErr.message || redirectErr}`);
-            }
-        } finally {
+        } catch (redirectErr) {
+            console.error(`[Auth0 ${serviceName} error]`, redirectErr);
+            showAuthAlert(`${serviceName} sign-in failed: ${redirectErr.message || redirectErr}`);
+            showToast(`${serviceName} sign-in error`);
             if (btnElement) {
                 btnElement.disabled = false;
                 btnElement.innerHTML = origHtml;
