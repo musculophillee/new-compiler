@@ -2629,123 +2629,71 @@ int main() {
         });
     }
 
-    // 2. Continue with Google (Real In-Modal 1-Click Google Sign-In)
+    async function loginWithAuth0Social(connectionName, btnElement, serviceName) {
+        hideAuthAlert();
+        const origHtml = btnElement ? btnElement.innerHTML : '';
+        if (btnElement) {
+            btnElement.disabled = true;
+            btnElement.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Connecting with ${serviceName}...</span>`;
+        }
+
+        const client = await getAuth0Client();
+        if (!client) {
+            showAuthAlert('Auth0 SDK is still loading. Please check your internet connection.');
+            if (btnElement) {
+                btnElement.disabled = false;
+                btnElement.innerHTML = origHtml;
+            }
+            return;
+        }
+
+        try {
+            await client.loginWithPopup({
+                authorizationParams: {
+                    connection: connectionName
+                }
+            });
+            const user = await client.getUser();
+            if (user) {
+                await syncAuth0User(user);
+            }
+        } catch (popupErr) {
+            if (popupErr && (popupErr.error === 'popup_closed' || popupErr.message === 'Popup closed')) {
+                if (btnElement) {
+                    btnElement.disabled = false;
+                    btnElement.innerHTML = origHtml;
+                }
+                return;
+            }
+            console.warn(`[Auth0 ${serviceName} popup fallback to redirect]`, popupErr);
+            try {
+                await client.loginWithRedirect({
+                    authorizationParams: {
+                        connection: connectionName
+                    }
+                });
+            } catch (redirectErr) {
+                showAuthAlert(`${serviceName} Sign-In: ${redirectErr.message || redirectErr}`);
+            }
+        } finally {
+            if (btnElement) {
+                btnElement.disabled = false;
+                btnElement.innerHTML = origHtml;
+            }
+        }
+    }
+
+    // 2. Continue with Google (Real Auth0 Google OAuth)
     if (btnPrivyGoogle) {
         btnPrivyGoogle.addEventListener('click', async () => {
-            hideAuthAlert();
-            let email = (privyEmailInput ? privyEmailInput.value : '').trim().toLowerCase();
-
-            // If user hasn't typed an email yet, prompt Google One Tap or guide in-modal
-            if (!email) {
-                if (window.google && window.google.accounts && window.google.accounts.id) {
-                    try {
-                        window.google.accounts.id.prompt((notification) => {
-                            if (notification.isNotDisplayed()) {
-                                showAuthAlert('Enter your Google email in the field above to connect directly.', 'info');
-                                if (privyEmailInput) {
-                                    privyEmailInput.placeholder = 'your.name@gmail.com';
-                                    privyEmailInput.focus();
-                                }
-                            }
-                        });
-                        return;
-                    } catch (e) {}
-                }
-
-                showAuthAlert('Enter your Google email in the field above to connect directly.', 'info');
-                if (privyEmailInput) {
-                    privyEmailInput.placeholder = 'your.name@gmail.com';
-                    privyEmailInput.focus();
-                }
-                return;
-            }
-
-            if (!email.includes('@')) {
-                email = `${email}@gmail.com`;
-                if (privyEmailInput) privyEmailInput.value = email;
-            }
-
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                showAuthAlert('Please enter a valid Google Account email address.');
-                if (privyEmailInput) privyEmailInput.focus();
-                return;
-            }
-
-            const origHtml = btnPrivyGoogle.innerHTML;
-            btnPrivyGoogle.disabled = true;
-            btnPrivyGoogle.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Connecting with Google...</span>';
-
-            try {
-                const res = await fetch('/api/auth/oauth', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        provider: 'google',
-                        name: email.split('@')[0],
-                        email: email,
-                        turnstile_token: '1x00000000000000000000BB'
-                    })
-                });
-                const data = await res.json();
-                if (res.ok && data.success && data.token) {
-                    loginUser(data.user, data.token);
-                } else {
-                    showAuthAlert(data.error || 'Google authentication failed.');
-                }
-            } catch (err) {
-                showAuthAlert('Unable to reach authentication server.');
-            } finally {
-                btnPrivyGoogle.disabled = false;
-                btnPrivyGoogle.innerHTML = origHtml;
-            }
+            await loginWithAuth0Social('google-oauth2', btnPrivyGoogle, 'Google');
         });
     }
 
-    // 3. Continue with GitHub (Real In-Modal 1-Click GitHub Sign-In)
+    // 3. Continue with GitHub (Real Auth0 GitHub OAuth)
     if (btnPrivyGithub) {
         btnPrivyGithub.addEventListener('click', async () => {
-            hideAuthAlert();
-            let val = (privyEmailInput ? privyEmailInput.value : '').trim();
-
-            if (!val) {
-                showAuthAlert('Enter your GitHub username or email in the field above to connect.', 'info');
-                if (privyEmailInput) {
-                    privyEmailInput.placeholder = 'github-handle or user@domain.com';
-                    privyEmailInput.focus();
-                }
-                return;
-            }
-
-            let email = val.includes('@') ? val.toLowerCase() : `${val.toLowerCase().replace(/[^a-z0-9_-]/g, '')}@users.noreply.github.com`;
-            let name = val.split('@')[0];
-
-            const origHtml = btnPrivyGithub.innerHTML;
-            btnPrivyGithub.disabled = true;
-            btnPrivyGithub.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Connecting with GitHub...</span>';
-
-            try {
-                const res = await fetch('/api/auth/oauth', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        provider: 'github',
-                        name: name,
-                        email: email,
-                        turnstile_token: '1x00000000000000000000BB'
-                    })
-                });
-                const data = await res.json();
-                if (res.ok && data.success && data.token) {
-                    loginUser(data.user, data.token);
-                } else {
-                    showAuthAlert(data.error || 'GitHub authentication failed.');
-                }
-            } catch (err) {
-                showAuthAlert('Unable to reach authentication server.');
-            } finally {
-                btnPrivyGithub.disabled = false;
-                btnPrivyGithub.innerHTML = origHtml;
-            }
+            await loginWithAuth0Social('github', btnPrivyGithub, 'GitHub');
         });
     }
 
