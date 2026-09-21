@@ -60,34 +60,34 @@
 
 /* 🖤 Darryl Carbon (Dark Obsidian Mode) */
 [data-theme="darryl-carbon"] {
-    --color-bg-main: #121212;
-    --color-bg-surface: #181818;
-    --color-bg-elevated: #222222;
-    --color-bg-hover: #2b2b2b;
+    --color-bg-main: #0c0e12;
+    --color-bg-surface: #13161c;
+    --color-bg-elevated: #1a1d24;
+    --color-bg-hover: #242832;
 
-    --color-fg-main: #f5f2ea;
-    --color-fg-muted: #a39e94;
-    --color-fg-subtle: #6f6c65;
+    --color-fg-main: #f5f6f8;
+    --color-fg-muted: #9ba1b0;
+    --color-fg-subtle: #6c7280;
 
-    --color-border: #383838;
-    --color-border-subtle: #262626;
-    --color-border-strong: #4a4a4a;
+    --color-border: #2e3340;
+    --color-border-subtle: #1c2028;
+    --color-border-strong: #42495b;
 
     --color-accent: #d7ff3f;
     --color-accent-soft: #273600;
-    --color-accent-fg: #151515;
+    --color-accent-fg: #0b0f14;
 
-    --color-console-bg: #181818;
+    --color-console-bg: #13161c;
     --color-console-fg: #d7ff3f;
-    --color-console-text: #f5f2ea;
-    --color-console-meta: #a39e94;
-    --color-console-banner-bg: #121212;
-    --color-console-banner-border: #383838;
+    --color-console-text: #f5f6f8;
+    --color-console-meta: #9ba1b0;
+    --color-console-banner-bg: #0c0e12;
+    --color-console-banner-border: #2e3340;
 
-    --shadow-pixel-xs: 2px 2px 0px #000000;
-    --shadow-pixel-sm: 3px 3px 0px #000000;
-    --shadow-pixel: 4px 4px 0px #000000;
-    --shadow-pixel-lg: 6px 6px 0px #000000;
+    --shadow-pixel-xs: 2px 2px 0px #040507;
+    --shadow-pixel-sm: 3px 3px 0px #040507;
+    --shadow-pixel: 4px 4px 0px #040507;
+    --shadow-pixel-lg: 6px 6px 0px #040507;
 }
 
 /* 🔮 Cyberpunk Void */
