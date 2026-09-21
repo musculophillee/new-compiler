@@ -420,9 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     auto_select: true
                 });
                 window.google.accounts.id.prompt();
-            } catch (e) {
-                console.log('[Google GIS Init]', e);
-            }
+            } catch (e) {}
         }
     }
     if (document.readyState === 'loading') {
@@ -495,7 +493,6 @@ document.addEventListener('DOMContentLoaded', () => {
     async function syncAuth0User(auth0User) {
         if (!auth0User) return;
         try {
-            console.log('[Auth0 Sync] Syncing user profile:', auth0User);
             const email = auth0User.email || `${auth0User.nickname || 'user'}@auth0.user`;
             const name = auth0User.name || auth0User.nickname || (email.includes('@') ? email.split('@')[0] : 'Developer');
             const res = await fetch('/api/auth/oauth', {
@@ -510,7 +507,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json();
             if (res.ok && data.success && data.token) {
-                console.log('[Auth0 Sync] Server login success:', data.user);
                 loginUser(data.user, data.token);
                 updateAuthUI();
                 showToast(`Signed in with Auth0 as ${data.user.name}! 🚀`);
@@ -545,16 +541,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (query.includes('code=') && query.includes('state=')) {
             try {
                 showToast('Finalizing secure sign-in... ⚡');
-                console.log('[Auth0] Exchanging authorization code for tokens...');
                 await client.handleRedirectCallback();
-                console.log('[Auth0] Callback processed successfully.');
                 const user = await client.getUser();
-                console.log('[Auth0] Retrieved user:', user);
                 if (user) {
                     await syncAuth0User(user);
                     return;
                 } else {
-                    console.warn('[Auth0] getUser() returned no profile.');
                     showToast('Could not load user profile from Auth0.');
                 }
             } catch (err) {
