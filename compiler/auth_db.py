@@ -53,6 +53,29 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_code_history (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                language TEXT NOT NULL,
+                code TEXT NOT NULL,
+                stdin TEXT DEFAULT '',
+                tab_name TEXT DEFAULT 'main',
+                is_autosave INTEGER DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_code_history_user_time 
+            ON user_code_history(user_id, updated_at DESC)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_code_history_autosave 
+            ON user_code_history(user_id, language, is_autosave)
+        """)
     conn.close()
 
 
@@ -261,3 +284,158 @@ def revoke_token(token):
         return True
     finally:
         conn.close()
+
+
+def clean_snippet_dict(row):
+    if not row:
+        return None
+    return {
+        "id": row["id"],
+        "user_id": row["user_id"],
+        "title": row["title"],
+        "language": row["language"],
+        "code": row["code"],
+        "stdin": row["stdin"] or "",
+        "tab_name": row["tab_name"] or "main",
+        "is_autosave": bool(row["is_autosave"]),
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"]
+    }
+
+
+def save_code_snippet(user_id, title, language, code, stdin="", tab_name="main", is_autosave=1, snippet_id=None):
+    if not user_id:
+        return {"success": False, "error": "User ID required"}
+    language = (language or "c").strip().lower()
+    title = (title or f"{language.upper()} Project").strip()
+    code = code if code is not None else ""
+    stdin = stdin or ""
+    tab_name = tab_name or "main"
+    is_autosave = 1 if is_autosave else 0
+    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+    conn = get_db()
+    try:
+        with conn:
+            target_id = snippet_id
+            if not target_id and is_autosave:
+                # Check if an autosave already exists for this user and language
+                cur = conn.execute("""
+                    SELECT id FROM user_code_history 
+                    WHERE user_id = ? AND language = ? AND is_autosave = 1 
+                    ORDER BY updated_at DESC LIMIT 1
+                """, (user_id, language))
+                row = cur.fetchone()
+                if row:
+                    target_id = row["id"]
+
+            if target_id:
+                # Update existing record
+                conn.execute("""
+                    UPDATE user_code_history
+                    SET title = ?, language = ?, code = ?, stdin = ?, tab_name = ?, is_autosave = ?, updated_at = ?
+                    WHERE id = ? AND user_id = ?
+                """, (title, language, code, stdin, tab_name, is_autosave, now, target_id, user_id))
+            else:
+                target_id = str(uuid.uuid4())
+                conn.execute("""
+                    INSERT INTO user_code_history (id, user_id, title, language, code, stdin, tab_name, is_autosave, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (target_id, user_id, title, language, code, stdin, tab_name, is_autosave, now, now))
+
+            cur = conn.execute("SELECT * FROM user_code_history WHERE id = ?", (target_id,))
+            snippet = clean_snippet_dict(cur.fetchone())
+            return {"success": True, "snippet": snippet}
+    finally:
+        conn.close()
+
+
+def get_user_history(user_id, limit=60):
+    if not user_id:
+        return []
+    conn = get_db()
+    try:
+        cur = conn.execute("""
+            SELECT * FROM user_code_history 
+            WHERE user_id = ? 
+            ORDER BY updated_at DESC 
+            LIMIT ?
+        """, (user_id, limit))
+        return [clean_snippet_dict(r) for r in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def get_latest_autosave(user_id, language=None):
+    if not user_id:
+        return None
+    conn = get_db()
+    try:
+        if language:
+            cur = conn.execute("""
+                SELECT * FROM user_code_history 
+                WHERE user_id = ? AND language = ? 
+                ORDER BY updated_at DESC 
+                LIMIT 1
+            """, (user_id, language.strip().lower()))
+        else:
+            cur = conn.execute("""
+                SELECT * FROM user_code_history 
+                WHERE user_id = ? 
+                ORDER BY updated_at DESC 
+                LIMIT 1
+            """, (user_id,))
+        row = cur.fetchone()
+        return clean_snippet_dict(row)
+    finally:
+        conn.close()
+
+
+def get_snippet_by_id(user_id, snippet_id):
+    if not user_id or not snippet_id:
+        return None
+    conn = get_db()
+    try:
+        cur = conn.execute("""
+            SELECT * FROM user_code_history 
+            WHERE id = ? AND user_id = ?
+        """, (snippet_id, user_id))
+        return clean_snippet_dict(cur.fetchone())
+    finally:
+        conn.close()
+
+
+def delete_code_snippet(user_id, snippet_id):
+    if not user_id or not snippet_id:
+        return {"success": False, "error": "Invalid parameters"}
+    conn = get_db()
+    try:
+        with conn:
+            cur = conn.execute("DELETE FROM user_code_history WHERE id = ? AND user_id = ?", (snippet_id, user_id))
+            if cur.rowcount > 0:
+                return {"success": True}
+            return {"success": False, "error": "Snippet not found or unauthorized"}
+    finally:
+        conn.close()
+
+
+def rename_code_snippet(user_id, snippet_id, new_title):
+    if not user_id or not snippet_id or not new_title:
+        return {"success": False, "error": "Invalid parameters"}
+    new_title = new_title.strip()
+    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    conn = get_db()
+    try:
+        with conn:
+            cur = conn.execute("""
+                UPDATE user_code_history 
+                SET title = ?, updated_at = ? 
+                WHERE id = ? AND user_id = ?
+            """, (new_title, now, snippet_id, user_id))
+            if cur.rowcount > 0:
+                cur2 = conn.execute("SELECT * FROM user_code_history WHERE id = ?", (snippet_id,))
+                return {"success": True, "snippet": clean_snippet_dict(cur2.fetchone())}
+            return {"success": False, "error": "Snippet not found or unauthorized"}
+    finally:
+        conn.close()
+

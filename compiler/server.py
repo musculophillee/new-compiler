@@ -119,7 +119,7 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
 
@@ -133,10 +133,27 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
             "/api/auth/login": self.handle_auth_login,
             "/api/auth/oauth": self.handle_auth_oauth,
             "/api/auth/logout": self.handle_auth_logout,
+            "/api/code/save": self.handle_code_save,
+            "/api/code/rename": self.handle_code_rename,
+            "/api/code/delete": self.handle_code_delete,
         }
-        handler = routes.get(self.path)
+        handler = routes.get(self.path.split('?')[0])
         if handler:
             handler()
+        else:
+            self.send_error(404, "Not Found")
+
+    def do_PUT(self):
+        clean_path = self.path.split('?')[0]
+        if clean_path == "/api/code/rename":
+            self.handle_code_rename()
+        else:
+            self.send_error(404, "Not Found")
+
+    def do_DELETE(self):
+        clean_path = self.path.split('?')[0]
+        if clean_path == "/api/code/delete":
+            self.handle_code_delete()
         else:
             self.send_error(404, "Not Found")
 
@@ -148,6 +165,10 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
             self.handle_auth_me()
         elif clean_path == "/api/auth/config":
             self.handle_auth_config()
+        elif clean_path == "/api/code/history":
+            self.handle_code_history()
+        elif clean_path == "/api/code/latest":
+            self.handle_code_latest()
         elif clean_path in ("/editor", "/compiler"):
             query = "?" + self.path.split('?')[1] if '?' in self.path else ""
             self.path = "/editor.html" + query
@@ -266,6 +287,138 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
             "auth0_client_id": os.environ.get("AUTH0_CLIENT_ID", "oyDtE33Pu5lUfOTYB0U0ZFx5vMp26yUr")
         }, 200)
         log_request("GET", "/api/auth/config", 200)
+
+    def handle_code_save(self):
+        try:
+            token = self._get_auth_token()
+            if not token:
+                self._send_json({"success": False, "error": "Sign in required to autosave code to cloud."}, 401)
+                return
+            user = auth_db.get_user_from_token(token)
+            if not user:
+                self._send_json({"success": False, "error": "Invalid or expired session. Please sign in again."}, 401)
+                return
+
+            payload = self._read_json()
+            title = payload.get("title")
+            language = payload.get("language", "c")
+            code = payload.get("code", "")
+            stdin = payload.get("stdin", "")
+            tab_name = payload.get("tab_name", "main")
+            is_autosave = payload.get("is_autosave", True)
+            snippet_id = payload.get("snippet_id") or payload.get("id")
+
+            res = auth_db.save_code_snippet(
+                user_id=user["id"],
+                title=title,
+                language=language,
+                code=code,
+                stdin=stdin,
+                tab_name=tab_name,
+                is_autosave=is_autosave,
+                snippet_id=snippet_id
+            )
+            status = 200 if res.get("success") else 400
+            self._send_json(res, status)
+            log_request("POST", "/api/code/save", status)
+        except Exception as e:
+            self._send_json({"success": False, "error": str(e)}, 500)
+            log_request("POST", "/api/code/save", 500)
+
+    def handle_code_history(self):
+        try:
+            token = self._get_auth_token()
+            if not token:
+                self._send_json({"success": False, "error": "Sign in required to view cloud history."}, 401)
+                return
+            user = auth_db.get_user_from_token(token)
+            if not user:
+                self._send_json({"success": False, "error": "Invalid session."}, 401)
+                return
+
+            history = auth_db.get_user_history(user["id"])
+            self._send_json({"success": True, "history": history}, 200)
+            log_request("GET", "/api/code/history", 200)
+        except Exception as e:
+            self._send_json({"success": False, "error": str(e)}, 500)
+            log_request("GET", "/api/code/history", 500)
+
+    def handle_code_latest(self):
+        try:
+            token = self._get_auth_token()
+            if not token:
+                self._send_json({"success": False, "error": "Sign in required."}, 401)
+                return
+            user = auth_db.get_user_from_token(token)
+            if not user:
+                self._send_json({"success": False, "error": "Invalid session."}, 401)
+                return
+
+            import urllib.parse
+            parsed = urllib.parse.urlparse(self.path)
+            params = urllib.parse.parse_qs(parsed.query)
+            language = params.get("language", [None])[0]
+
+            snippet = auth_db.get_latest_autosave(user["id"], language)
+            self._send_json({"success": True, "snippet": snippet}, 200)
+            log_request("GET", "/api/code/latest", 200)
+        except Exception as e:
+            self._send_json({"success": False, "error": str(e)}, 500)
+            log_request("GET", "/api/code/latest", 500)
+
+    def handle_code_rename(self):
+        try:
+            token = self._get_auth_token()
+            if not token:
+                self._send_json({"success": False, "error": "Unauthorized."}, 401)
+                return
+            user = auth_db.get_user_from_token(token)
+            if not user:
+                self._send_json({"success": False, "error": "Invalid session."}, 401)
+                return
+
+            payload = self._read_json()
+            snippet_id = payload.get("id") or payload.get("snippet_id")
+            new_title = payload.get("title")
+            res = auth_db.rename_code_snippet(user["id"], snippet_id, new_title)
+            status = 200 if res.get("success") else 400
+            self._send_json(res, status)
+            log_request("POST", "/api/code/rename", status)
+        except Exception as e:
+            self._send_json({"success": False, "error": str(e)}, 500)
+            log_request("POST", "/api/code/rename", 500)
+
+    def handle_code_delete(self):
+        try:
+            token = self._get_auth_token()
+            if not token:
+                self._send_json({"success": False, "error": "Unauthorized."}, 401)
+                return
+            user = auth_db.get_user_from_token(token)
+            if not user:
+                self._send_json({"success": False, "error": "Invalid session."}, 401)
+                return
+
+            snippet_id = None
+            if self.command in ("POST", "DELETE") and self.headers.get("Content-Length"):
+                try:
+                    payload = self._read_json()
+                    snippet_id = payload.get("id") or payload.get("snippet_id")
+                except Exception:
+                    pass
+            if not snippet_id:
+                import urllib.parse
+                parsed = urllib.parse.urlparse(self.path)
+                params = urllib.parse.parse_qs(parsed.query)
+                snippet_id = params.get("id", [None])[0] or params.get("snippet_id", [None])[0]
+
+            res = auth_db.delete_code_snippet(user["id"], snippet_id)
+            status = 200 if res.get("success") else 400
+            self._send_json(res, status)
+            log_request("DELETE", "/api/code/delete", status)
+        except Exception as e:
+            self._send_json({"success": False, "error": str(e)}, 500)
+            log_request("DELETE", "/api/code/delete", 500)
 
     def handle_health(self):
         compilers = {

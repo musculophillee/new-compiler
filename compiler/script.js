@@ -1241,6 +1241,8 @@ int main() {
 
     // ===== Code Execution =====
     async function runCode() {
+        // Autosave to cloud before running (named snapshot of the run)
+        if (currentUser) performCloudSave(true);
         if (!editor || isExecuting) return;
 
         const code = editor.getValue();
@@ -1985,10 +1987,78 @@ int main() {
     const actSnippets = document.getElementById('actSnippets');
     const actFiles = document.getElementById('actFiles');
     const actShortcuts = document.getElementById('actShortcuts');
+    const actHistory = document.getElementById('actHistory');
+    const btnMenuHistory = document.getElementById('btnMenuHistory');
+    const btnQuickSnapshot = document.getElementById('btnQuickSnapshot');
+    const btnSaveSnapshotMenu = document.getElementById('btnSaveSnapshotMenu');
+    const btnConfirmSaveSnapshot = document.getElementById('btnConfirmSaveSnapshot');
+    const inputSnapshotTitle = document.getElementById('inputSnapshotTitle');
+    const cloudSyncPill = document.getElementById('cloudSyncPill');
+    const cloudSyncIcon = document.getElementById('cloudSyncIcon');
+    const cloudSyncText = document.getElementById('cloudSyncText');
 
     if (actSnippets) {
         actSnippets.addEventListener('click', () => {
             toggleSideDrawer('📝 CODE SNIPPETS', renderSnippetsList);
+        });
+    }
+
+    if (actHistory) {
+        actHistory.addEventListener('click', () => {
+            if (!currentUser) {
+                requireAuth(() => toggleSideDrawer('📜 CLOUD HISTORY', renderHistoryList));
+                return;
+            }
+            toggleSideDrawer('📜 CLOUD HISTORY', renderHistoryList);
+        });
+    }
+
+    if (btnMenuHistory) {
+        btnMenuHistory.addEventListener('click', () => {
+            if (userDropdownMenu) userDropdownMenu.classList.remove('open');
+            if (!currentUser) {
+                requireAuth(() => toggleSideDrawer('📜 CLOUD HISTORY', renderHistoryList));
+                return;
+            }
+            toggleSideDrawer('📜 CLOUD HISTORY', renderHistoryList);
+        });
+    }
+
+    function openSnapshotModal() {
+        if (!currentUser) {
+            requireAuth(() => openSnapshotModal());
+            return;
+        }
+        if (inputSnapshotTitle) {
+            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            inputSnapshotTitle.value = `${LANGUAGES[currentLang].name} - ${timeStr}`;
+            setTimeout(() => inputSnapshotTitle.select(), 100);
+        }
+        openModal('modalSaveSnapshot');
+        playSound('click');
+    }
+
+    if (btnQuickSnapshot) {
+        btnQuickSnapshot.addEventListener('click', openSnapshotModal);
+    }
+
+    if (btnSaveSnapshotMenu) {
+        btnSaveSnapshotMenu.addEventListener('click', () => {
+            if (userDropdownMenu) userDropdownMenu.classList.remove('open');
+            openSnapshotModal();
+        });
+    }
+
+    if (btnConfirmSaveSnapshot) {
+        btnConfirmSaveSnapshot.addEventListener('click', async () => {
+            const title = (inputSnapshotTitle ? inputSnapshotTitle.value : '').trim() || `${LANGUAGES[currentLang].name} Snapshot`;
+            closeModal('modalSaveSnapshot');
+            await performCloudSave(false, title);
+            playSound('success');
+            showToast(`Snapshot "${title}" saved to cloud! 📌`);
+            if (sideDrawer.style.display !== 'none' && drawerTitle.textContent.includes('HISTORY')) {
+                renderHistoryList();
+            }
         });
     }
 
@@ -2015,7 +2085,7 @@ int main() {
     }
 
     function toggleSideDrawer(title, contentRenderer) {
-        if (sideDrawer.style.display === 'none') {
+        if (sideDrawer.style.display === 'none' || drawerTitle.textContent !== title) {
             sideDrawer.style.display = 'flex';
             drawerTitle.textContent = title;
             contentRenderer();
@@ -2305,6 +2375,9 @@ int main() {
         playSound('success');
         showToast(`Welcome back, ${currentUser.name || 'Developer'}! 🚀`);
 
+        // Restore latest cloud code session after login
+        setTimeout(() => restoreLatestCloudCode(), 600);
+
         if (pendingAuthAction) {
             const action = pendingAuthAction;
             pendingAuthAction = null;
@@ -2361,6 +2434,8 @@ int main() {
                     currentUser = data.user;
                     localStorage.setItem('zero_compiler_user', JSON.stringify(currentUser));
                     updateAuthUI();
+                    // Restore latest cloud code session on page load
+                    setTimeout(() => restoreLatestCloudCode(), 800);
                 }
             } else if (res.status === 401) {
                 // Token expired
@@ -2896,6 +2971,323 @@ int main() {
 
     updateGeminiStatusUI();
 
+    // ===== Cloud Autosave & History System =====
+
+    let _cloudSaveTimer = null;
+    let _lastSavedCode = {}; // Track last saved per lang to avoid duplicate saves
+
+    function updateCloudSyncStatus(state, customText) {
+        if (!cloudSyncPill) return;
+        cloudSyncPill.className = 'cloud-sync-pill ' + (state || 'offline');
+        if (cloudSyncIcon) {
+            if (state === 'saving') {
+                cloudSyncIcon.className = 'fa-solid fa-cloud-arrow-up';
+            } else if (state === 'saved') {
+                cloudSyncIcon.className = 'fa-solid fa-cloud-check';
+            } else {
+                cloudSyncIcon.className = 'fa-solid fa-cloud';
+            }
+        }
+        if (cloudSyncText) {
+            cloudSyncText.textContent = customText ||
+                (state === 'saving' ? 'Saving...' : state === 'saved' ? 'Saved' : 'Not Saved');
+        }
+    }
+
+    function scheduleCloudAutosave() {
+        if (!currentUser) return;
+        updateCloudSyncStatus('saving');
+        if (_cloudSaveTimer) clearTimeout(_cloudSaveTimer);
+        _cloudSaveTimer = setTimeout(() => {
+            performCloudSave(true);
+        }, 1500);
+    }
+
+    async function performCloudSave(isAutosave = true, customTitle = null) {
+        if (!currentUser || !editor) return;
+        const code = editor.getValue();
+        const lang = currentLang;
+        if (!code || !code.trim()) return;
+
+        // Skip if nothing changed since last save (for autosave only)
+        if (isAutosave && _lastSavedCode[lang] === code) return;
+
+        updateCloudSyncStatus('saving');
+        try {
+            const title = customTitle ||
+                (isAutosave ? `${LANGUAGES[lang].name} Session` : `${LANGUAGES[lang].name} Snapshot`);
+            const res = await fetch('/api/code/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentToken}`
+                },
+                body: JSON.stringify({
+                    language: lang,
+                    code: code,
+                    title: title,
+                    is_autosave: isAutosave ? 1 : 0
+                })
+            });
+            if (res.ok) {
+                _lastSavedCode[lang] = code;
+                updateCloudSyncStatus('saved');
+                setTimeout(() => updateCloudSyncStatus('saved', '✓ Cloud Synced'), 200);
+                // Reset to default text after 3s
+                setTimeout(() => {
+                    if (cloudSyncText && cloudSyncText.textContent.includes('Cloud Synced')) {
+                        updateCloudSyncStatus('saved', 'Saved');
+                    }
+                }, 3000);
+            } else {
+                updateCloudSyncStatus('offline');
+            }
+        } catch (e) {
+            updateCloudSyncStatus('offline');
+        }
+    }
+
+    async function restoreLatestCloudCode() {
+        if (!currentUser || !currentToken || !editor) return;
+        try {
+            const res = await fetch(`/api/code/latest?language=${currentLang}`, {
+                headers: { 'Authorization': `Bearer ${currentToken}` }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.success && data.snippet && data.snippet.code) {
+                const localCode = editor.getValue();
+                const templateCode = LANGUAGES[currentLang] && LANGUAGES[currentLang].template;
+                // Only restore if editor still has template/default code or is empty
+                const isDefault = !localCode || localCode.trim() === '' ||
+                    (templateCode && localCode.trim() === templateCode.trim());
+                if (isDefault) {
+                    editor.setValue(data.snippet.code);
+                    saveCode(currentLang, data.snippet.code);
+                    updateCloudSyncStatus('saved', '✓ Session Restored');
+                    showToast(`☁️ Session restored: ${data.snippet.title || currentLang}`);
+                    setTimeout(() => updateCloudSyncStatus('saved', 'Saved'), 3000);
+                } else {
+                    updateCloudSyncStatus('saved', 'Saved');
+                }
+            }
+        } catch (e) {
+            // Silent fail — don't disrupt UX
+        }
+    }
+
+    function renderHistoryList() {
+        if (!drawerContent) return;
+        drawerContent.innerHTML = `
+            <div style="padding: 0 4px 12px;">
+                <input type="text" class="history-search-input" id="historySearchInput" placeholder="🔍 Search by title or language..." />
+                <div class="history-filter-chips" id="historyFilterChips">
+                    <button class="filter-chip active" data-filter="all">All</button>
+                    <button class="filter-chip" data-filter="autosave">Auto-saves</button>
+                    <button class="filter-chip" data-filter="snapshot">Snapshots</button>
+                    <button class="filter-chip" data-filter="c">C</button>
+                    <button class="filter-chip" data-filter="cpp">C++</button>
+                    <button class="filter-chip" data-filter="python">Python</button>
+                    <button class="filter-chip" data-filter="javascript">JS</button>
+                </div>
+            </div>
+            <div id="historyCardsContainer">Loading history...</div>
+        `;
+
+        const searchInput = drawerContent.querySelector('#historySearchInput');
+        const filterChips = drawerContent.querySelectorAll('.filter-chip');
+        const container = drawerContent.querySelector('#historyCardsContainer');
+        let allHistory = [];
+        let activeFilter = 'all';
+        let searchQuery = '';
+
+        // Attach search handler
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                searchQuery = searchInput.value.toLowerCase();
+                filterAndRenderCards(allHistory, container, activeFilter, searchQuery);
+            });
+        }
+
+        // Attach filter chip handlers
+        filterChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                filterChips.forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                activeFilter = chip.getAttribute('data-filter');
+                filterAndRenderCards(allHistory, container, activeFilter, searchQuery);
+            });
+        });
+
+        // Load history from server
+        fetch('/api/code/history', {
+            headers: { 'Authorization': `Bearer ${currentToken}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.history) {
+                allHistory = data.history;
+                filterAndRenderCards(allHistory, container, activeFilter, searchQuery);
+            } else {
+                container.innerHTML = `<div class="history-empty"><i class="fa-solid fa-cloud-slash"></i><p>No history found. Start coding to autosave!</p></div>`;
+            }
+        })
+        .catch(() => {
+            container.innerHTML = `<div class="history-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>Could not load history. Is the server running?</p></div>`;
+        });
+    }
+
+    function filterAndRenderCards(history, container, filter, query) {
+        if (!container) return;
+        let filtered = history;
+
+        // Apply language/type filter
+        if (filter === 'autosave') {
+            filtered = filtered.filter(h => h.is_autosave);
+        } else if (filter === 'snapshot') {
+            filtered = filtered.filter(h => !h.is_autosave);
+        } else if (filter !== 'all') {
+            filtered = filtered.filter(h => h.language === filter);
+        }
+
+        // Apply search query
+        if (query) {
+            filtered = filtered.filter(h =>
+                (h.title || '').toLowerCase().includes(query) ||
+                (h.language || '').toLowerCase().includes(query)
+            );
+        }
+
+        if (!filtered.length) {
+            container.innerHTML = `<div class="history-empty"><i class="fa-solid fa-magnifying-glass"></i><p>No results found.</p></div>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        filtered.forEach(snippet => {
+            const card = document.createElement('div');
+            card.className = 'history-card';
+            const relTime = formatRelativeTime(snippet.updated_at);
+            const langInfo = LANGUAGES[snippet.language] || { name: snippet.language, icon: 'fa-solid fa-code' };
+            const badge = snippet.is_autosave
+                ? `<span class="history-type-badge autosave">Auto</span>`
+                : `<span class="history-type-badge snapshot">📌 Snap</span>`;
+
+            const preview = (snippet.code || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 120);
+
+            card.innerHTML = `
+                <div class="history-card-header">
+                    <div class="history-card-title-group">
+                        <div class="history-card-lang-icon"><i class="${langInfo.icon}"></i></div>
+                        <div>
+                            <div class="history-card-title" id="title-display-${snippet.id}">${escapeHtml(snippet.title || 'Untitled')}</div>
+                            <div class="history-card-meta">${langInfo.name} &middot; ${relTime} ${badge}</div>
+                        </div>
+                    </div>
+                </div>
+                <pre class="history-preview">${preview}${snippet.code && snippet.code.length > 120 ? '...' : ''}</pre>
+                <div class="history-card-actions">
+                    <button class="btn-history-restore" data-id="${snippet.id}">
+                        <i class="fa-solid fa-rotate-left"></i> Restore
+                    </button>
+                    <div class="history-card-subactions">
+                        <button class="btn-history-rename" data-id="${snippet.id}" title="Rename">
+                            <i class="fa-solid fa-pencil"></i>
+                        </button>
+                        <button class="btn-history-delete" data-id="${snippet.id}" title="Delete">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Restore button
+            card.querySelector('.btn-history-restore').addEventListener('click', () => {
+                restoreSnippetIntoEditor(snippet);
+            });
+
+            // Rename button
+            card.querySelector('.btn-history-rename').addEventListener('click', () => {
+                const newTitle = prompt('Enter new name for this save:', snippet.title || 'Untitled');
+                if (!newTitle || !newTitle.trim()) return;
+                fetch('/api/code/rename', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentToken}`
+                    },
+                    body: JSON.stringify({ id: snippet.id, title: newTitle.trim() })
+                }).then(r => r.json()).then(d => {
+                    if (d.success) {
+                        snippet.title = newTitle.trim();
+                        const el = container.querySelector(`#title-display-${snippet.id}`);
+                        if (el) el.textContent = newTitle.trim();
+                        showToast('Renamed successfully ✏️');
+                        playSound('success');
+                    }
+                }).catch(() => showToast('Rename failed.'));
+            });
+
+            // Delete button
+            card.querySelector('.btn-history-delete').addEventListener('click', () => {
+                if (!confirm(`Delete "${snippet.title || 'this save'}"?`)) return;
+                fetch('/api/code/delete', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentToken}`
+                    },
+                    body: JSON.stringify({ id: snippet.id })
+                }).then(r => r.json()).then(d => {
+                    if (d.success) {
+                        const idx = history.indexOf(snippet);
+                        if (idx > -1) history.splice(idx, 1);
+                        filterAndRenderCards(history, container, filter, query);
+                        showToast('Deleted 🗑️');
+                        playSound('click');
+                    }
+                }).catch(() => showToast('Delete failed.'));
+            });
+
+            container.appendChild(card);
+        });
+    }
+
+    function restoreSnippetIntoEditor(snippet) {
+        if (!snippet || !editor) return;
+        switchLanguage(snippet.language || currentLang);
+        setTimeout(() => {
+            editor.setValue(snippet.code || '');
+            saveCode(snippet.language || currentLang, snippet.code || '');
+            sideDrawer.style.display = 'none';
+            if (editor) editor.layout();
+            playSound('success');
+            showToast(`Restored: ${snippet.title || 'Session'} ☁️`);
+        }, 100);
+    }
+
+    function formatRelativeTime(isoString) {
+        if (!isoString) return 'Unknown';
+        try {
+            const date = new Date(isoString.includes('T') ? isoString : isoString + 'Z');
+            if (isNaN(date)) return isoString;
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+            const diffHr = Math.floor(diffMin / 60);
+            const diffDay = Math.floor(diffHr / 24);
+            if (diffSec < 60) return 'Just now';
+            if (diffMin < 60) return `${diffMin}m ago`;
+            if (diffHr < 24) return `${diffHr}h ago`;
+            if (diffDay < 7) return `${diffDay}d ago`;
+            return date.toLocaleDateString();
+        } catch (e) { return isoString; }
+    }
+
+    // Initialize cloud sync pill state
+    updateCloudSyncStatus(currentUser ? 'saved' : 'offline', currentUser ? 'Cloud Ready' : 'Sign in to save');
+
     // ===== Helpers =====
     function showToast(text) {
         toast.textContent = text;
@@ -2911,6 +3303,8 @@ int main() {
 
     function saveCode(lang, code) {
         localStorage.setItem(`darryl_code_${lang}`, code);
+        // Trigger cloud autosave with debounce (1.5s)
+        scheduleCloudAutosave();
     }
 
     function capitalize(s) {

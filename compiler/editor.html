@@ -191,6 +191,14 @@
                                 <i class="fa-regular fa-envelope"></i>
                                 <span id="menuUserEmailText" style="font-size: 11px;">user@example.com</span>
                             </div>
+                            <div class="dropdown-item" id="btnMenuHistory" style="font-weight: 600;">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                                <span>MY CLOUD HISTORY</span>
+                            </div>
+                            <div class="dropdown-item" id="btnSaveSnapshotMenu" style="font-weight: 600;">
+                                <i class="fa-solid fa-bookmark"></i>
+                                <span>SAVE SNAPSHOT</span>
+                            </div>
                             <div class="dropdown-item" id="btnAuthLogout" style="color: #ef4444; font-weight: 700;">
                                 <i class="fa-solid fa-arrow-right-from-bracket"></i>
                                 <span>LOG OUT</span>
@@ -217,21 +225,25 @@
                     <i class="fa-solid fa-code dock-icon"></i>
                     <span class="dock-label">02 // CODE</span>
                 </button>
+                <button class="dock-item" id="actHistory" title="Cloud History & Autosaved Sessions">
+                    <i class="fa-solid fa-clock-rotate-left dock-icon"></i>
+                    <span class="dock-label">03 // HISTORY</span>
+                </button>
                 <div class="dock-spacer"></div>
                 <button class="dock-item" id="actShortcuts" title="Keyboard Shortcuts">
                     <i class="fa-regular fa-keyboard dock-icon"></i>
-                    <span class="dock-label">03 // KEYS</span>
+                    <span class="dock-label">04 // KEYS</span>
                 </button>
             </aside>
 
-            <!-- Collapsible Side Snippets Drawer -->
+            <!-- Collapsible Side Snippets / History Drawer -->
             <div class="quest-drawer" id="sideDrawer" style="display: none;">
                 <div class="drawer-header">
                     <span class="drawer-title" id="drawerTitle">02 // CODE SNIPPETS</span>
                     <button class="drawer-close" id="drawerClose"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="drawer-content" id="drawerContent">
-                    <!-- Dynamic Snippet Cards -->
+                    <!-- Dynamic Snippet / History Cards -->
                 </div>
             </div>
 
@@ -249,7 +261,13 @@
                     <button class="btn-add-tab" id="btnAddTab" title="New File (+)">
                         <i class="fa-solid fa-plus"></i>
                     </button>
+                    <!-- Cloud Autosave Indicator -->
+                    <div class="cloud-sync-pill" id="cloudSyncPill" title="Cloud Autosave Status">
+                        <i class="fa-solid fa-cloud" id="cloudSyncIcon"></i>
+                        <span id="cloudSyncText">Saved</span>
+                    </div>
                     <div class="tab-tools">
+                        <button class="tool-btn" id="btnQuickSnapshot" title="Save Named Snapshot to Cloud"><i class="fa-solid fa-bookmark"></i></button>
                         <button class="tool-btn" id="btnFixTab" title="Auto-Fix Code with AI"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
                         <button class="tool-btn" id="btnResetCode" title="Reset Code"><i class="fa-solid fa-rotate-left"></i></button>
                         <button class="tool-btn" id="btnCopyCode" title="Copy Code"><i class="fa-regular fa-copy"></i></button>
@@ -501,6 +519,44 @@
                     <div class="key-row"><span>Open AI Assistant</span><kbd>Ctrl + I</kbd></div>
                     <div class="key-row"><span>Toggle Line Comment</span><kbd>Ctrl + /</kbd></div>
                     <div class="key-row"><span>New File / Tab</span><kbd>Ctrl + Alt + N</kbd></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Snapshot Modal -->
+    <div class="retro-modal-overlay" id="modalSaveSnapshot">
+        <div class="retro-modal-box neo-auth-box">
+            <div class="modal-header">
+                <div class="auth-header-title">
+                    <span class="pixel-brand-mark">
+                        <span class="pixel-sq sq-1"></span>
+                        <span class="pixel-sq sq-2"></span>
+                        <span class="pixel-sq sq-3"></span>
+                        <span class="pixel-sq sq-4"></span>
+                    </span>
+                    <h3>04 // SAVE CLOUD SNAPSHOT</h3>
+                </div>
+                <button class="modal-close" data-close="modalSaveSnapshot" title="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body neo-auth-body">
+                <p style="font-size: 12px; color: var(--color-fg-muted); margin-bottom: 12px; line-height: 1.5;">
+                    Save a permanent snapshot of your current code and input to your cloud history. You can restore or export it anytime.
+                </p>
+                <div class="privy-email-form">
+                    <label for="inputSnapshotTitle" class="privy-field-label">
+                        <i class="fa-solid fa-tag"></i> SNAPSHOT TITLE
+                    </label>
+                    <div class="privy-email-input-group">
+                        <input type="text" id="inputSnapshotTitle" class="privy-input" placeholder="e.g. Binary Search Tree V1, LeetCode TwoSum" maxlength="60">
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px;">
+                        <button type="button" class="arcade-btn modal-close-btn" data-close="modalSaveSnapshot">Cancel</button>
+                        <button type="button" class="arcade-btn btn-primary-neon" id="btnConfirmSaveSnapshot">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <span>SAVE TO CLOUD</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

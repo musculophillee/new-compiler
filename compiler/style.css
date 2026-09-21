@@ -689,6 +689,370 @@ body:has(.codedex-app) {
     color: var(--color-fg-muted);
 }
 
+/* ===== Cloud Autosave Indicator Pill ===== */
+.cloud-sync-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-fg-muted);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    margin-left: auto;
+    margin-right: 6px;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.cloud-sync-pill.saving {
+    color: #eab308;
+    border-color: #eab308;
+    background: rgba(234, 179, 8, 0.08);
+}
+
+.cloud-sync-pill.saving i {
+    animation: cloudPulse 1s infinite alternate;
+}
+
+.cloud-sync-pill.saved {
+    color: #22c55e;
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+.cloud-sync-pill.offline {
+    color: var(--color-fg-muted);
+    opacity: 0.75;
+}
+
+@keyframes cloudPulse {
+    from { transform: scale(0.9); opacity: 0.6; }
+    to { transform: scale(1.15); opacity: 1; }
+}
+
+/* ===== History Drawer & Cards ===== */
+.history-drawer-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.history-search-input {
+    width: 100%;
+    padding: 6px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    border: 1.5px solid var(--color-border);
+    background: var(--color-bg-surface);
+    color: var(--color-fg-main);
+    box-shadow: var(--shadow-pixel-xs);
+    outline: none;
+    margin-bottom: 8px;
+}
+
+.history-search-input:focus {
+    border-color: var(--color-accent);
+}
+
+.history-filter-chips {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+    overflow-x: auto;
+}
+
+.history-chip {
+    padding: 3px 7px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-surface);
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.08s ease;
+}
+
+.history-chip.active, .history-chip:hover {
+    background: var(--color-border);
+    color: var(--color-bg-main);
+}
+
+.history-card {
+    background: var(--color-bg-surface);
+    border: 1.5px solid var(--color-border);
+    box-shadow: var(--shadow-pixel-xs);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: transform 0.08s ease, box-shadow 0.08s ease, border-color 0.08s ease;
+    position: relative;
+}
+
+.history-card:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: var(--shadow-pixel-sm);
+    border-color: var(--color-accent);
+}
+
+.history-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.history-card-title-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
+}
+
+.history-lang-badge {
+    padding: 1px 5px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    background: var(--color-border);
+    color: var(--color-bg-main);
+    border-radius: 2px;
+}
+
+.history-card-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--color-fg-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.history-autosave-tag {
+    font-size: 9px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+
+.history-time {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-fg-muted);
+    white-space: nowrap;
+}
+
+.history-preview {
+    font-family: 'JetBrains Mono', 'DM Mono', monospace;
+    font-size: 10px;
+    line-height: 1.4;
+    color: var(--color-fg-muted);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    padding: 6px 8px;
+    border-radius: 2px;
+    max-height: 52px;
+    overflow: hidden;
+    white-space: pre;
+}
+
+.history-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 2px;
+}
+
+.btn-history-restore {
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    border: 1.5px solid var(--color-border);
+    box-shadow: var(--shadow-pixel-xs);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: transform 0.08s ease;
+}
+
+.btn-history-restore:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: var(--shadow-pixel-sm);
+}
+
+.history-card-subactions {
+    display: flex;
+    gap: 4px;
+}
+
+.btn-history-subaction {
+    background: transparent;
+    border: none;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 4px 6px;
+    border-radius: 2px;
+    transition: color 0.1s ease, background 0.1s ease;
+}
+
+.btn-history-subaction:hover {
+    color: var(--color-fg-main);
+    background: var(--color-bg-elevated);
+}
+
+.btn-history-subaction.delete:hover {
+    color: #ef4444;
+}
+
+.history-empty-state {
+    text-align: center;
+    padding: 24px 12px;
+    color: var(--color-fg-muted);
+}
+
+.history-empty-state i {
+    font-size: 28px;
+    margin-bottom: 10px;
+    opacity: 0.5;
+}
+
+.history-empty-state p {
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* Filter chip alias (used by history drawer renderHistoryList) */
+.filter-chip {
+    padding: 3px 8px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    border: 1.5px solid var(--color-border);
+    background: var(--color-bg-surface);
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.08s ease;
+    border-radius: 2px;
+}
+
+.filter-chip.active,
+.filter-chip:hover {
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    border-color: var(--color-accent);
+}
+
+/* History empty state (class used by renderHistoryList) */
+.history-empty {
+    text-align: center;
+    padding: 28px 12px;
+    color: var(--color-fg-muted);
+}
+
+.history-empty i {
+    font-size: 26px;
+    margin-bottom: 10px;
+    opacity: 0.45;
+    display: block;
+}
+
+.history-empty p {
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* History type badges (Auto / Snap) */
+.history-type-badge {
+    display: inline-block;
+    padding: 1px 5px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    border-radius: 2px;
+}
+
+.history-type-badge.autosave {
+    background: rgba(59, 130, 246, 0.12);
+    color: #3b82f6;
+}
+
+.history-type-badge.snapshot {
+    background: rgba(234, 179, 8, 0.1);
+    color: #eab308;
+}
+
+/* History card lang icon */
+.history-card-lang-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-elevated);
+    border: 1.5px solid var(--color-border);
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--color-accent);
+    flex-shrink: 0;
+}
+
+/* History card meta line */
+.history-card-meta {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    color: var(--color-fg-muted);
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+/* History rename / delete buttons */
+.btn-history-rename,
+.btn-history-delete {
+    background: transparent;
+    border: none;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 4px 6px;
+    border-radius: 2px;
+    transition: color 0.1s ease, background 0.1s ease;
+}
+
+.btn-history-rename:hover {
+    color: var(--color-fg-main);
+    background: var(--color-bg-elevated);
+}
+
+.btn-history-delete:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+}
+
 /* ==========================================================================
    6. EDITOR PANE & BRUTALIST TABS
    ========================================================================== */
