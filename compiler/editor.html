@@ -5,29 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zero Compiler — Online Cloud IDE & AI Diagnostics</title>
     <meta name="description" content="A fast, modern online compiler and cloud IDE with Zero Compiler. Built with Monaco Editor and local multi-language execution.">
-    <!-- Google Fonts: Space Grotesk (Darryl Display), Inter (Clean UI), DM Mono & JetBrains Mono (Code) -->
+    <!-- Google Fonts: Preconnect & Asynchronous Loading (Non-Blocking) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500;600&family=Press+Start+2P&display=swap" rel="stylesheet">
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500;600&family=Press+Start+2P&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500;600&family=Press+Start+2P&display=swap"></noscript>
+    <!-- Font Awesome Icons (Non-Blocking) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <link rel="stylesheet" href="style.css?v=3.6.0">
     <script src="theme.js"></script>
     <!-- Monaco Editor Loader -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
     <!-- Canvas Confetti for Level-Up Celebrations -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" defer></script>
     <!-- Cloudflare Turnstile CAPTCHA (Free, Privacy-Preserving Bot Protection) -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <!-- Official Google Identity Services (Detects active browser Google session) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <!-- Auth0 Single Page App SDK (Local first, CDN fallback) -->
-    <script src="/auth0-spa-js.production.js"></script>
-    <script>
-        if (typeof auth0 === 'undefined') {
-            document.write('<script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"><\/script>');
-        }
-    </script>
+    <!-- Auth0 Single Page App SDK (Non-Blocking Deferred) -->
+    <script src="/auth0-spa-js.production.js" defer></script>
 </head>
 <body>
     <div class="codedex-app">
@@ -53,7 +50,7 @@
             <div class="topbar-center">
                 <!-- Language Selector Dropdown -->
                 <div class="arcade-dropdown-wrapper" id="langDropdownWrapper">
-                    <button class="arcade-btn lang-btn" id="langDropdownBtn">
+                    <button class="arcade-btn lang-btn" id="langDropdownBtn" aria-label="Select programming language">
                         <span class="lang-icon" id="currentLangIcon"><i class="fa-solid fa-code"></i></span>
                         <span class="lang-name" id="currentLangName">C (GCC)</span>
                         <i class="fa-solid fa-chevron-down micro-icon"></i>
@@ -99,7 +96,7 @@
                 </div>
 
                 <!-- Primary Tactile Run Button (Signature Neon Lime) -->
-                <button class="arcade-btn btn-run-quest" id="btnRun" title="Run Code (Ctrl + Enter)">
+                <button class="arcade-btn btn-run-quest" id="btnRun" title="Run Code (Ctrl + Enter)" aria-label="Run Code">
                     <span class="btn-inner">
                         <i class="fa-solid fa-play"></i>
                         <span>RUN CODE</span>
@@ -108,7 +105,7 @@
                 </button>
 
                 <!-- AI Assist Trigger (Solid Ink Black) -->
-                <button class="arcade-btn btn-duck-ai" id="btnAiQuick" title="Ask AI Assistant">
+                <button class="arcade-btn btn-duck-ai" id="btnAiQuick" title="Ask AI Assistant" aria-label="Ask AI Assistant">
                     <span class="btn-inner">
                         <i class="fa-solid fa-bolt"></i>
                         <span>AI ASSIST</span>
@@ -116,13 +113,13 @@
                 </button>
 
                 <!-- Auto-Format Button -->
-                <button class="arcade-btn btn-mini" id="btnFormat" title="Clean & Format Code (Shift+Alt+F)">
+                <button class="arcade-btn btn-mini" id="btnFormat" title="Clean & Format Code (Shift+Alt+F)" aria-label="Clean and Format Code">
                     <i class="fa-solid fa-bars-staggered"></i>
                     <span>FORMAT</span>
                 </button>
 
                 <!-- Auto-Fix Code Button -->
-                <button class="arcade-btn btn-mini btn-fix-neon" id="btnFixTop" title="Auto-Fix & Rewrite Crashed Code">
+                <button class="arcade-btn btn-mini btn-fix-neon" id="btnFixTop" title="Auto-Fix & Rewrite Crashed Code" aria-label="Auto-Fix and Rewrite Crashed Code">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                     <span>AUTO-FIX</span>
                 </button>
@@ -131,13 +128,13 @@
             <!-- Right Controls -->
             <div class="topbar-right">
                 <!-- Sound Effects Toggle -->
-                <button class="arcade-btn btn-icon-round" id="btnSound" title="Toggle Sound Effects">
+                <button class="arcade-btn btn-icon-round" id="btnSound" title="Toggle Sound Effects" aria-label="Toggle Sound Effects">
                     <i class="fa-solid fa-volume-high" id="soundIcon"></i>
                 </button>
 
                 <!-- Theme Toggle -->
                 <div class="arcade-dropdown-wrapper" id="themeDropdownWrapper">
-                    <button class="arcade-btn btn-icon-round" id="btnTheme" title="Change Theme">
+                    <button class="arcade-btn btn-icon-round" id="btnTheme" title="Change Theme" aria-label="Change Theme">
                         <i class="fa-solid fa-palette"></i>
                     </button>
                     <div class="arcade-dropdown-menu dropdown-right" id="themeDropdownMenu">
@@ -166,26 +163,26 @@
                 </div>
 
                 <!-- Download & Share -->
-                <button class="arcade-btn btn-icon-round" id="btnDownload" title="Download Code">
+                <button class="arcade-btn btn-icon-round" id="btnDownload" title="Download Code" aria-label="Download Code">
                     <i class="fa-solid fa-arrow-down"></i>
                 </button>
-                <button class="arcade-btn btn-icon-round" id="btnShare" title="Share Quest Link">
+                <button class="arcade-btn btn-icon-round" id="btnShare" title="Share Quest Link" aria-label="Share Quest Link">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </button>
 
                 <!-- Settings -->
-                <button class="arcade-btn btn-icon-round" id="btnSettings" title="IDE Settings">
+                <button class="arcade-btn btn-icon-round" id="btnSettings" title="IDE Settings" aria-label="IDE Settings">
                     <i class="fa-solid fa-sliders"></i>
                 </button>
 
                 <!-- Auth / Profile Area -->
                 <div class="topbar-auth-container" id="topbarAuthContainer">
-                    <button class="arcade-btn btn-auth-login" id="btnOpenAuthModal" title="Log In / Sign Up">
+                    <button class="arcade-btn btn-auth-login" id="btnOpenAuthModal" title="Log In / Sign Up" aria-label="Log In or Sign Up">
                         <i class="fa-solid fa-user"></i>
                         <span>LOG IN</span>
                     </button>
                     <div class="auth-user-dropdown" id="authUserDropdown" style="display: none;">
-                        <button class="auth-user-badge" id="btnUserMenu" title="User Profile">
+                        <button class="auth-user-badge" id="btnUserMenu" title="User Profile" aria-label="User Profile">
                             <span class="auth-user-avatar" id="topbarUserAvatar"><i class="fa-solid fa-user"></i></span>
                             <span class="auth-user-name" id="topbarUserName">Coder</span>
                             <i class="fa-solid fa-chevron-down auth-caret"></i>
@@ -218,24 +215,24 @@
         <main class="codedex-workspace">
             <!-- Left Activity Dock (Sleek Minimalist Strip) -->
             <aside class="quest-activity-dock">
-                <a href="/" class="dock-item" id="actHome" title="Back to Homepage">
+                <a href="/" class="dock-item" id="actHome" title="Back to Homepage" aria-label="Back to Homepage">
                     <i class="fa-solid fa-house dock-icon"></i>
                     <span class="dock-label">00 // HOME</span>
                 </a>
-                <button class="dock-item active" id="actFiles" title="Files">
+                <button class="dock-item active" id="actFiles" title="Files" aria-label="Files">
                     <i class="fa-regular fa-folder-open dock-icon"></i>
                     <span class="dock-label">01 // FILES</span>
                 </button>
-                <button class="dock-item" id="actSnippets" title="Code Snippets">
+                <button class="dock-item" id="actSnippets" title="Code Snippets" aria-label="Code Snippets">
                     <i class="fa-solid fa-code dock-icon"></i>
                     <span class="dock-label">02 // CODE</span>
                 </button>
-                <button class="dock-item" id="actHistory" title="Cloud History & Autosaved Sessions">
+                <button class="dock-item" id="actHistory" title="Cloud History & Autosaved Sessions" aria-label="Cloud History and Autosaved Sessions">
                     <i class="fa-solid fa-clock-rotate-left dock-icon"></i>
                     <span class="dock-label">03 // HISTORY</span>
                 </button>
                 <div class="dock-spacer"></div>
-                <button class="dock-item" id="actShortcuts" title="Keyboard Shortcuts">
+                <button class="dock-item" id="actShortcuts" title="Keyboard Shortcuts" aria-label="Keyboard Shortcuts">
                     <i class="fa-regular fa-keyboard dock-icon"></i>
                     <span class="dock-label">04 // KEYS</span>
                 </button>
@@ -245,7 +242,7 @@
             <div class="quest-drawer" id="sideDrawer" style="display: none;">
                 <div class="drawer-header">
                     <span class="drawer-title" id="drawerTitle">02 // CODE SNIPPETS</span>
-                    <button class="drawer-close" id="drawerClose"><i class="fa-solid fa-xmark"></i></button>
+                    <button class="drawer-close" id="drawerClose" aria-label="Close Drawer"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="drawer-content" id="drawerContent">
                     <!-- Dynamic Snippet / History Cards -->
@@ -260,10 +257,10 @@
                         <div class="quest-tab active" data-tab-id="1">
                             <span class="tab-badge">C</span>
                             <span class="tab-name" title="Double-click or click ✏️ to rename">main.c</span>
-                            <span class="tab-rename-btn" title="Rename file"><i class="fa-solid fa-pen"></i></span>
+                            <span class="tab-rename-btn" title="Rename file" aria-label="Rename file"><i class="fa-solid fa-pen"></i></span>
                         </div>
                     </div>
-                    <button class="btn-add-tab" id="btnAddTab" title="New File (+)">
+                    <button class="btn-add-tab" id="btnAddTab" title="New File (+)" aria-label="New File">
                         <i class="fa-solid fa-plus"></i>
                     </button>
                     <!-- Cloud Autosave Indicator -->
@@ -272,10 +269,10 @@
                         <span id="cloudSyncText">Saved</span>
                     </div>
                     <div class="tab-tools">
-                        <button class="tool-btn" id="btnQuickSnapshot" title="Save Named Snapshot to Cloud"><i class="fa-solid fa-bookmark"></i></button>
-                        <button class="tool-btn" id="btnFixTab" title="Auto-Fix Code with AI"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
-                        <button class="tool-btn" id="btnResetCode" title="Reset Code"><i class="fa-solid fa-rotate-left"></i></button>
-                        <button class="tool-btn" id="btnCopyCode" title="Copy Code"><i class="fa-regular fa-copy"></i></button>
+                        <button class="tool-btn" id="btnQuickSnapshot" title="Save Named Snapshot to Cloud" aria-label="Save Named Snapshot to Cloud"><i class="fa-solid fa-bookmark"></i></button>
+                        <button class="tool-btn" id="btnFixTab" title="Auto-Fix Code with AI" aria-label="Auto-Fix Code with AI"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                        <button class="tool-btn" id="btnResetCode" title="Reset Code" aria-label="Reset Code"><i class="fa-solid fa-rotate-left"></i></button>
+                        <button class="tool-btn" id="btnCopyCode" title="Copy Code" aria-label="Copy Code"><i class="fa-regular fa-copy"></i></button>
                     </div>
                 </div>
 
@@ -318,8 +315,8 @@
                             <span class="status-heart"><i class="fa-solid fa-circle"></i></span>
                             <span class="status-txt" id="statusText">READY</span>
                         </span>
-                        <button class="tool-btn" id="btnClearOutput" title="Clear Console"><i class="fa-solid fa-ban"></i></button>
-                        <button class="tool-btn" id="btnCopyOutput" title="Copy Output"><i class="fa-regular fa-copy"></i></button>
+                        <button class="tool-btn" id="btnClearOutput" title="Clear Console" aria-label="Clear Console"><i class="fa-solid fa-ban"></i></button>
+                        <button class="tool-btn" id="btnCopyOutput" title="Copy Output" aria-label="Copy Output"><i class="fa-regular fa-copy"></i></button>
                     </div>
                 </div>
 
@@ -346,7 +343,7 @@
                                     <p>Inputs typed here are sent directly to <code>scanf</code>, <code>cin</code>, or <code>input()</code>.</p>
                                 </div>
                             </div>
-                            <textarea id="stdinInput" class="backpack-input" placeholder="Type standard input values here (e.g. numbers, words, test cases)..." spellcheck="false"></textarea>
+                            <textarea id="stdinInput" class="backpack-input" placeholder="Type standard input values here (e.g. numbers, words, test cases)..." spellcheck="false" aria-label="Standard Input (Stdin)"></textarea>
                         </div>
                     </div>
 
@@ -359,7 +356,7 @@
                                     <span class="pulse-dot-ai" id="aiKeyDot"></span>
                                     <span id="aiKeyStatusText">Local AI Active (Add API Key for Cloud Intelligence)</span>
                                 </div>
-                                <button class="btn-config-key" id="btnConfigKey" title="Configure AI API Key">
+                                <button class="btn-config-key" id="btnConfigKey" title="Configure AI API Key" aria-label="Configure AI API Key">
                                     <i class="fa-solid fa-key"></i> <span id="btnConfigKeyText">Set Key</span>
                                 </button>
                             </div>
@@ -396,8 +393,8 @@
 
                             <!-- Interactive Prompt Bar -->
                             <div class="wizard-prompt-bar">
-                                <input type="text" id="aiPromptInput" placeholder="Ask AI Assistant for debugging, optimization, or explanations...">
-                                <button class="arcade-btn btn-send-spell" id="btnSendAi" title="Send question">
+                                <input type="text" id="aiPromptInput" placeholder="Ask AI Assistant for debugging, optimization, or explanations..." aria-label="Ask AI Assistant prompt">
+                                <button class="arcade-btn btn-send-spell" id="btnSendAi" title="Send question" aria-label="Send AI Question">
                                     <span>SEND</span> <i class="fa-solid fa-paper-plane"></i>
                                 </button>
                             </div>
@@ -430,7 +427,7 @@
         <div class="retro-modal-box">
             <div class="modal-header">
                 <h3>⚙️ EDITOR SETTINGS</h3>
-                <button class="modal-close" data-close="modalSettings"><i class="fa-solid fa-xmark"></i></button>
+                <button class="modal-close" data-close="modalSettings" aria-label="Close Settings"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
                 <div class="setting-item">
@@ -438,7 +435,7 @@
                         <strong>Font Scale</strong>
                         <p>Editor font size in pixels</p>
                     </div>
-                    <select id="settingFontSize" class="retro-select">
+                    <select id="settingFontSize" class="retro-select" aria-label="Editor Font Size">
                         <option value="12">12px Tiny</option>
                         <option value="13">13px Small</option>
                         <option value="14" selected>14px Cozy (Default)</option>
@@ -452,7 +449,7 @@
                         <p>Play retro blips and action sounds</p>
                     </div>
                     <label class="retro-toggle">
-                        <input type="checkbox" id="settingSound" checked>
+                        <input type="checkbox" id="settingSound" checked aria-label="8-Bit Sound Effects">
                         <span class="retro-slider"></span>
                     </label>
                 </div>
@@ -462,7 +459,7 @@
                         <p>Show code overview minimap on right</p>
                     </div>
                     <label class="retro-toggle">
-                        <input type="checkbox" id="settingMinimap" checked>
+                        <input type="checkbox" id="settingMinimap" checked aria-label="Code Minimap">
                         <span class="retro-slider"></span>
                     </label>
                 </div>
@@ -472,7 +469,7 @@
                         <p>Wrap overflowing lines</p>
                     </div>
                     <label class="retro-toggle">
-                        <input type="checkbox" id="settingWordWrap">
+                        <input type="checkbox" id="settingWordWrap" aria-label="Word Wrap">
                         <span class="retro-slider"></span>
                     </label>
                 </div>
@@ -484,8 +481,8 @@
                         <p>Powers 1-click Auto-Fix, compiler debugging, algorithmic code writing, and live chat.</p>
                     </div>
                     <div style="display: flex; gap: 8px; width: 100%; margin-top: 4px;">
-                        <input type="password" id="settingAiKey" class="retro-input" placeholder="Paste AI API Key (e.g. AIzaSy...)" style="flex: 1; padding: 7px 10px;">
-                        <button class="arcade-btn" id="btnToggleKeyVis" title="Show/Hide Key" style="padding: 7px 12px;"><i class="fa-solid fa-eye" id="eyeKeyIcon"></i></button>
+                        <input type="password" id="settingAiKey" class="retro-input" placeholder="Paste AI API Key (e.g. AIzaSy...)" style="flex: 1; padding: 7px 10px;" aria-label="Cloud AI API Key">
+                        <button class="arcade-btn" id="btnToggleKeyVis" title="Show/Hide Key" aria-label="Show or Hide Key" style="padding: 7px 12px;"><i class="fa-solid fa-eye" id="eyeKeyIcon"></i></button>
                         <button class="arcade-btn" id="btnSaveAiKey" style="background: var(--color-green); color: #fff; padding: 7px 14px; font-weight: 700;">SAVE</button>
                     </div>
                     <div style="font-size: 11.5px; margin-top: 4px;">
@@ -513,7 +510,7 @@
         <div class="retro-modal-box">
             <div class="modal-header">
                 <h3>⌨️ KEYBOARD SHORTCUTS</h3>
-                <button class="modal-close" data-close="modalShortcuts"><i class="fa-solid fa-xmark"></i></button>
+                <button class="modal-close" data-close="modalShortcuts" aria-label="Close Shortcuts"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
                 <div class="keys-list">
@@ -542,7 +539,7 @@
                     </span>
                     <h3>04 // SAVE CLOUD SNAPSHOT</h3>
                 </div>
-                <button class="modal-close" data-close="modalSaveSnapshot" title="Close"><i class="fa-solid fa-xmark"></i></button>
+                <button class="modal-close" data-close="modalSaveSnapshot" title="Close" aria-label="Close Save Snapshot Modal"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body neo-auth-body">
                 <p style="font-size: 12px; color: var(--color-fg-muted); margin-bottom: 12px; line-height: 1.5;">
@@ -553,7 +550,7 @@
                         <i class="fa-solid fa-tag"></i> SNAPSHOT TITLE
                     </label>
                     <div class="privy-email-input-group">
-                        <input type="text" id="inputSnapshotTitle" class="privy-input" placeholder="e.g. Binary Search Tree V1, LeetCode TwoSum" maxlength="60">
+                        <input type="text" id="inputSnapshotTitle" class="privy-input" placeholder="e.g. Binary Search Tree V1, LeetCode TwoSum" maxlength="60" aria-label="Snapshot Title">
                     </div>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px;">
                         <button type="button" class="arcade-btn modal-close-btn" data-close="modalSaveSnapshot">Cancel</button>
@@ -580,7 +577,7 @@
                     </span>
                     <h3>03 // DEVELOPER ACCESS & AI UNLOCK</h3>
                 </div>
-                <button class="modal-close" data-close="modalAuth" title="Close"><i class="fa-solid fa-xmark"></i></button>
+                <button class="modal-close" data-close="modalAuth" title="Close" aria-label="Close Authentication Modal"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body neo-auth-body">
                 <div class="auth-banner-compact">
@@ -599,8 +596,8 @@
                             <i class="fa-solid fa-envelope"></i> EMAIL ADDRESS
                         </label>
                         <div class="privy-email-input-group">
-                            <input type="email" id="privyEmailInput" class="privy-input" placeholder="Enter your email to continue..." autocomplete="email" required>
-                            <button type="submit" class="arcade-btn btn-privy-submit" id="btnSubmitPrivyEmail">
+                            <input type="email" id="privyEmailInput" class="privy-input" placeholder="Enter your email to continue..." autocomplete="email" required aria-label="Email Address">
+                            <button type="submit" class="arcade-btn btn-privy-submit" id="btnSubmitPrivyEmail" aria-label="Submit Email Address">
                                 <span>CONTINUE</span>
                                 <i class="fa-solid fa-arrow-right"></i>
                             </button>
@@ -642,15 +639,15 @@
 
                     <!-- Optional Privy App ID Configuration -->
                     <div class="privy-config-accordion">
-                        <button type="button" class="btn-toggle-privy-config" id="btnTogglePrivyConfig">
+                        <button type="button" class="btn-toggle-privy-config" id="btnTogglePrivyConfig" aria-label="Toggle Privy App Configuration">
                             <span><i class="fa-solid fa-gear"></i> Privy App Configuration (Optional)</span>
                             <i class="fa-solid fa-chevron-down" id="iconPrivyChevron"></i>
                         </button>
                         <div class="privy-config-drawer" id="privyConfigDrawer" style="display: none;">
                             <label for="inputPrivyAppId"><i class="fa-solid fa-key"></i> PRIVY APP ID</label>
                             <div class="privy-config-input-row">
-                                <input type="text" id="inputPrivyAppId" class="privy-input" placeholder="e.g. clabc123... from dashboard.privy.io">
-                                <button type="button" class="btn-save-privy-id" id="btnSavePrivyId">SAVE</button>
+                                <input type="text" id="inputPrivyAppId" class="privy-input" placeholder="e.g. clabc123... from dashboard.privy.io" aria-label="Privy Application ID">
+                                <button type="button" class="btn-save-privy-id" id="btnSavePrivyId" aria-label="Save Privy App ID">SAVE</button>
                             </div>
                             <span class="privy-config-hint">Get your free App ID at <a href="https://dashboard.privy.io" target="_blank" rel="noopener">dashboard.privy.io</a></span>
                         </div>
@@ -680,7 +677,7 @@
         <div class="retro-modal-box legal-modal-box">
             <div class="modal-header">
                 <h3>📜 ZERO COMPILER USER AGREEMENT</h3>
-                <button class="modal-close" data-close="modalUserAgreement"><i class="fa-solid fa-xmark"></i></button>
+                <button class="modal-close" data-close="modalUserAgreement" aria-label="Close User Agreement Modal"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body legal-modal-body">
                 <p class="legal-intro">Last updated: September 2026. Welcome to Zero Compiler. By creating an account, running code, or accessing our AI diagnostic services, you agree to abide by this User Agreement.</p>
@@ -722,7 +719,7 @@
         <div class="retro-modal-box legal-modal-box">
             <div class="modal-header">
                 <h3>🔒 ZERO COMPILER PRIVACY POLICY</h3>
-                <button class="modal-close" data-close="modalPrivacyPolicy"><i class="fa-solid fa-xmark"></i></button>
+                <button class="modal-close" data-close="modalPrivacyPolicy" aria-label="Close Privacy Policy Modal"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body legal-modal-body">
                 <p class="legal-intro">Last updated: September 2026. Zero Compiler values developer privacy. This document outlines how your data is handled.</p>

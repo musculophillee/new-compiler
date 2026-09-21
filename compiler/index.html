@@ -5,12 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zero Compiler — Code Online with Cloud IDE & AI Agents</title>
     <meta name="description" content="Write, compile, run, and AI-debug code online for free with Zero Compiler. Supports Python, C, C++, JavaScript, Java, Go, Rust, and more.">
-    <!-- Google Fonts: Space Grotesk, Inter, DM Mono, JetBrains Mono -->
+    <!-- Google Fonts: Preconnect & Asynchronous Loading (Non-Blocking) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"></noscript>
+    <!-- Font Awesome Icons (Non-Blocking) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <link rel="stylesheet" href="style.css?v=3.6.0">
     <link rel="stylesheet" href="home.css?v=3.6.0">
     <script src="theme.js"></script>
@@ -18,13 +20,8 @@
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <!-- Official Google Identity Services (Detects active browser Google session) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <!-- Auth0 Single Page App SDK (Local first, CDN fallback) -->
-    <script src="/auth0-spa-js.production.js"></script>
-    <script>
-        if (typeof auth0 === 'undefined') {
-            document.write('<script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"><\/script>');
-        }
-    </script>
+    <!-- Auth0 Single Page App SDK (Non-Blocking Deferred) -->
+    <script src="/auth0-spa-js.production.js" defer></script>
 </head>
 <body class="home-page">
 
@@ -52,15 +49,15 @@
             </ul>
 
             <div class="nav-actions">
-                <button class="pixel-btn btn-icon" id="btnThemeHome" title="Toggle Theme (Cream / Carbon)">
+                <button class="pixel-btn btn-icon" id="btnThemeHome" title="Toggle Theme (Cream / Carbon)" aria-label="Toggle Theme">
                     <i class="fa-solid fa-palette"></i>
                 </button>
-                <button class="pixel-btn btn-auth-home" id="btnOpenAuthHome" title="Log In / Sign Up">
+                <button class="pixel-btn btn-auth-home" id="btnOpenAuthHome" title="Log In / Sign Up" aria-label="Log In or Sign Up">
                     <i class="fa-solid fa-user"></i>
                     <span>LOG IN</span>
                 </button>
                 <div class="auth-user-dropdown" id="homeUserDropdown" style="display: none;">
-                    <button class="auth-user-badge" id="btnHomeUserMenu" title="User Profile" style="height: 42px;">
+                    <button class="auth-user-badge" id="btnHomeUserMenu" title="User Profile" aria-label="User Profile Menu" style="height: 42px;">
                         <span class="auth-user-avatar" id="homeUserAvatar"><i class="fa-solid fa-user"></i></span>
                         <span class="auth-user-name" id="homeUserName">Coder</span>
                         <i class="fa-solid fa-chevron-down auth-caret"></i>
@@ -71,10 +68,15 @@
                             <i class="fa-regular fa-envelope"></i>
                             <span id="homeUserEmailText" style="font-size: 11px;">user@example.com</span>
                         </div>
-                        <div class="dropdown-item" id="btnHomeLogout" style="color: #ef4444; font-weight: 700;">
+                        <a href="/editor.html" class="dropdown-item">
+                            <i class="fa-solid fa-terminal"></i>
+                            <span>Open Cloud IDE</span>
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item dropdown-logout" id="btnHomeLogout">
                             <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                            <span>LOG OUT</span>
-                        </div>
+                            <span>Sign Out</span>
+                        </button>
                     </div>
                 </div>
                 <a href="/editor.html" class="pixel-btn btn-primary-neon">
@@ -87,25 +89,28 @@
 
     <!-- ===== HERO SECTION ===== -->
     <header class="home-hero">
-        <div class="home-container">
-            <div class="hero-pill-badge">
+        <div class="home-container hero-inner">
+            
+            <!-- Floating Pixel Tag -->
+            <div class="hero-tag-badge">
                 <span class="pulse-dot-green"></span>
-                <span>CLOUD RUNTIME & LOCAL COMPILATION // ZERO INSTALLATION</span>
+                <span>ZERO-CONFIG CLOUD COMPILER & RUNTIME</span>
             </div>
 
-            <h1 class="hero-h1">
-                Code online with <span class="neon-highlight">Zero Compiler.</span>
+            <!-- Big Headline with Darryl Neo-Brutalist Framing -->
+            <h1 class="hero-title">
+                Code online with <span class="highlight-box">Zero Compiler.</span>
             </h1>
 
             <p class="hero-subtitle">
-                Zero Compiler helps developers, learners, and builders worldwide write, run, and AI-debug code online for free with instant execution and root-cause crash diagnostics.
+                Zero Compiler helps developers, learners, and coders worldwide write, run, and AI-debug code online for free with instant execution and full multi-arch diagnostics.
             </p>
 
             <!-- Search Bar -->
             <div class="hero-search-wrapper">
                 <div class="hero-search-bar">
                     <i class="fa-solid fa-magnifying-glass hero-search-icon"></i>
-                    <input type="text" class="hero-search-input" id="heroSearchInput" placeholder="Search any language (e.g. Python, C++, Java, Rust)..." autocomplete="off" spellcheck="false">
+                    <input type="text" class="hero-search-input" id="heroSearchInput" placeholder="Search any language (e.g. Python, C++, Java, Rust)..." autocomplete="off" spellcheck="false" aria-label="Search programming languages">
                     <span class="search-shortcut">/</span>
                 </div>
             </div>
@@ -678,7 +683,7 @@
                     </span>
                     <h3>03 // DEVELOPER ACCESS & AI UNLOCK</h3>
                 </div>
-                <button class="modal-close" data-close="modalAuth" title="Close"><i class="fa-solid fa-xmark"></i></button>
+                <button class="modal-close" data-close="modalAuth" title="Close" aria-label="Close Authentication Modal"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body neo-auth-body">
                 <div class="auth-banner-compact">
@@ -697,7 +702,7 @@
                             <i class="fa-solid fa-envelope"></i> EMAIL ADDRESS
                         </label>
                         <div class="privy-email-input-group">
-                            <input type="email" id="privyEmailInput" class="privy-input" placeholder="Enter your email to continue..." autocomplete="email" required>
+                            <input type="email" id="privyEmailInput" class="privy-input" placeholder="Enter your email to continue..." autocomplete="email" required aria-label="Email address">
                             <button type="submit" class="arcade-btn btn-privy-submit" id="btnSubmitPrivyEmail">
                                 <span>CONTINUE</span>
                                 <i class="fa-solid fa-arrow-right"></i>
@@ -747,7 +752,7 @@
                         <div class="privy-config-drawer" id="privyConfigDrawer" style="display: none;">
                             <label for="inputPrivyAppId"><i class="fa-solid fa-key"></i> PRIVY APP ID</label>
                             <div class="privy-config-input-row">
-                                <input type="text" id="inputPrivyAppId" class="privy-input" placeholder="e.g. clabc123... from dashboard.privy.io">
+                                <input type="text" id="inputPrivyAppId" class="privy-input" placeholder="e.g. clabc123... from dashboard.privy.io" aria-label="Privy Application ID">
                                 <button type="button" class="btn-save-privy-id" id="btnSavePrivyId">SAVE</button>
                             </div>
                             <span class="privy-config-hint">Get your free App ID at <a href="https://dashboard.privy.io" target="_blank" rel="noopener">dashboard.privy.io</a></span>
@@ -763,10 +768,10 @@
                     </div>
                 </div>
 
-                <div class="neo-auth-legal">
-                    <span>By continuing, you agree to our</span>
-                    <a href="#" id="linkOpenUserAgreement" class="neo-legal-link">User Agreement</a>
-                    <span>and acknowledge that you understand the</span>
+                <!-- Footer Agreement -->
+                <div class="neo-auth-footer">
+                    By continuing, you agree to our 
+                    <a href="#" id="linkOpenUserAgreement" class="neo-legal-link">User Agreement</a> and acknowledge that you understand the 
                     <a href="#" id="linkOpenPrivacyPolicy" class="neo-legal-link">Privacy Policy</a>.
                 </div>
             </div>
@@ -778,7 +783,7 @@
         <div class="retro-modal-box legal-modal-box">
             <div class="modal-header">
                 <h3>📜 ZERO COMPILER USER AGREEMENT</h3>
-                <button class="modal-close" data-close="modalUserAgreement"><i class="fa-solid fa-xmark"></i></button>
+                <button class="modal-close" data-close="modalUserAgreement" aria-label="Close User Agreement Modal"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body legal-modal-body">
                 <p class="legal-intro">Last updated: September 2026. Welcome to Zero Compiler. By creating an account, running code, or accessing our services, you agree to abide by this User Agreement.</p>
@@ -820,7 +825,7 @@
         <div class="retro-modal-box legal-modal-box">
             <div class="modal-header">
                 <h3>🔒 ZERO COMPILER PRIVACY POLICY</h3>
-                <button class="modal-close" data-close="modalPrivacyPolicy"><i class="fa-solid fa-xmark"></i></button>
+                <button class="modal-close" data-close="modalPrivacyPolicy" aria-label="Close Privacy Policy Modal"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body legal-modal-body">
                 <p class="legal-intro">Last updated: September 2026. Zero Compiler values developer privacy. This document outlines how your data is handled.</p>
