@@ -2995,7 +2995,9 @@ int main() {
     }
 
     function scheduleCloudAutosave() {
-        if (!currentUser) return;
+        // Accept if currentUser object OR if we have a token in localStorage (Auth0 redirect case)
+        const hasSession = currentUser || localStorage.getItem('zero_compiler_token');
+        if (!hasSession) return;
         updateCloudSyncStatus('saving');
         if (_cloudSaveTimer) clearTimeout(_cloudSaveTimer);
         _cloudSaveTimer = setTimeout(() => {
@@ -3004,7 +3006,14 @@ int main() {
     }
 
     async function performCloudSave(isAutosave = true, customTitle = null) {
-        if (!currentUser || !editor) return;
+        if (!editor) return;
+        // Always read the freshest token from localStorage (handles Auth0 redirect login)
+        const token = currentToken || localStorage.getItem('zero_compiler_token');
+        const user = currentUser || (() => {
+            try { return JSON.parse(localStorage.getItem('zero_compiler_user') || 'null'); } catch(e) { return null; }
+        })();
+        if (!token || !user) return;
+
         const code = editor.getValue();
         const lang = currentLang;
         if (!code || !code.trim()) return;
@@ -3020,7 +3029,7 @@ int main() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentToken}`
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
                     language: lang,
@@ -3031,27 +3040,42 @@ int main() {
             });
             if (res.ok) {
                 _lastSavedCode[lang] = code;
+                // Sync in-memory token/user if they were stale
+                if (!currentToken) currentToken = token;
+                if (!currentUser) currentUser = user;
                 updateCloudSyncStatus('saved');
-                setTimeout(() => updateCloudSyncStatus('saved', '✓ Cloud Synced'), 200);
-                // Reset to default text after 3s
+                setTimeout(() => updateCloudSyncStatus('saved', '\u2713 Cloud Synced'), 200);
                 setTimeout(() => {
                     if (cloudSyncText && cloudSyncText.textContent.includes('Cloud Synced')) {
                         updateCloudSyncStatus('saved', 'Saved');
                     }
                 }, 3000);
             } else {
+                const errData = await res.json().catch(() => ({}));
+                console.warn('[CloudSave] Server rejected save:', res.status, errData);
                 updateCloudSyncStatus('offline');
+                if (res.status === 401) {
+                    // Token expired — clear so user gets prompted to re-login
+                    localStorage.removeItem('zero_compiler_token');
+                    currentToken = null;
+                }
             }
         } catch (e) {
+            console.warn('[CloudSave] Network error:', e);
             updateCloudSyncStatus('offline');
         }
     }
 
     async function restoreLatestCloudCode() {
-        if (!currentUser || !currentToken || !editor) return;
+        // Read fresh from localStorage to handle Auth0 redirect flow
+        const token = currentToken || localStorage.getItem('zero_compiler_token');
+        const user = currentUser || (() => {
+            try { return JSON.parse(localStorage.getItem('zero_compiler_user') || 'null'); } catch(e) { return null; }
+        })();
+        if (!token || !user || !editor) return;
         try {
             const res = await fetch(`/api/code/latest?language=${currentLang}`, {
-                headers: { 'Authorization': `Bearer ${currentToken}` }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!res.ok) return;
             const data = await res.json();
@@ -3064,8 +3088,8 @@ int main() {
                 if (isDefault) {
                     editor.setValue(data.snippet.code);
                     saveCode(currentLang, data.snippet.code);
-                    updateCloudSyncStatus('saved', '✓ Session Restored');
-                    showToast(`☁️ Session restored: ${data.snippet.title || currentLang}`);
+                    updateCloudSyncStatus('saved', '\u2713 Session Restored');
+                    showToast(`\u2601\ufe0f Session restored: ${data.snippet.title || currentLang}`);
                     setTimeout(() => updateCloudSyncStatus('saved', 'Saved'), 3000);
                 } else {
                     updateCloudSyncStatus('saved', 'Saved');
@@ -3285,8 +3309,12 @@ int main() {
         } catch (e) { return isoString; }
     }
 
-    // Initialize cloud sync pill state
-    updateCloudSyncStatus(currentUser ? 'saved' : 'offline', currentUser ? 'Cloud Ready' : 'Sign in to save');
+    // Initialize cloud sync pill state — read directly from localStorage to avoid timing race
+    const _initToken = localStorage.getItem('zero_compiler_token');
+    updateCloudSyncStatus(
+        _initToken ? 'saved' : 'offline',
+        _initToken ? 'Cloud Ready' : 'Sign in to save'
+    );
 
     // ===== Helpers =====
     function showToast(text) {
