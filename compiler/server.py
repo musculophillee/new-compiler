@@ -7,6 +7,7 @@ provides AI Debugger & Code Intelligence API, and code formatting.
 import ast
 import base64
 import builtins
+import codecs
 import http.server
 import json
 import os
@@ -42,7 +43,9 @@ def cleanup_inactive_sessions():
                     sess["proc"].kill()
                 except Exception:
                     pass
-                shutil.rmtree(sess.get("temp_dir", ""), ignore_errors=True)
+                temp_dir = sess.get("temp_dir")
+                if temp_dir and os.path.isdir(temp_dir):
+                    shutil.rmtree(temp_dir, ignore_errors=True)
 
         fin_del = []
         for sid, fin in list(FINISHED_SESSIONS.items()):
@@ -640,14 +643,17 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
                 ACTIVE_SESSIONS[session_id] = session
 
             def read_stream(stream, queue_key):
+                decoder = codecs.getincrementaldecoder("utf-8")("replace")
                 try:
                     while True:
                         chunk = stream.read(1)
                         if not chunk:
                             break
-                        with session["lock"]:
-                            session[queue_key].append(chunk.decode("utf-8", errors="replace"))
-                            session["last_activity"] = time.time()
+                        decoded = decoder.decode(chunk)
+                        if decoded:
+                            with session["lock"]:
+                                session[queue_key].append(decoded)
+                                session["last_activity"] = time.time()
                 except Exception:
                     pass
 
@@ -718,6 +724,11 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
             if is_done:
                 for t in session.get("threads", []):
                     t.join(timeout=0.08)
+                try:
+                    proc.stdout.close()
+                    proc.stderr.close()
+                except Exception:
+                    pass
                 with session["lock"]:
                     if session["stdout_queue"]:
                         out_chunk += "".join(session["stdout_queue"])
@@ -739,7 +750,9 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
                     }
                     ACTIVE_SESSIONS.pop(session_id, None)
 
-                shutil.rmtree(session.get("temp_dir", ""), ignore_errors=True)
+                temp_dir = session.get("temp_dir")
+                if temp_dir and os.path.isdir(temp_dir):
+                    shutil.rmtree(temp_dir, ignore_errors=True)
 
                 self._send_json({
                     "stdout": out_chunk,
@@ -761,7 +774,7 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
                 "success": None
             })
         except Exception as e:
-            self._send_json({"error": str(e), "done": True, "exitCode": 0, "success": True}, 500)
+            self._send_json({"error": str(e), "done": True, "exitCode": 1, "success": False}, 500)
 
     def handle_execute_input(self):
         try:
@@ -799,7 +812,14 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
                     session["proc"].kill()
                 except Exception:
                     pass
-                shutil.rmtree(session.get("temp_dir", ""), ignore_errors=True)
+                try:
+                    session["proc"].stdout.close()
+                    session["proc"].stderr.close()
+                except Exception:
+                    pass
+                temp_dir = session.get("temp_dir")
+                if temp_dir and os.path.isdir(temp_dir):
+                    shutil.rmtree(temp_dir, ignore_errors=True)
             self._send_json({"success": True})
         except Exception as e:
             self._send_json({"success": False, "error": str(e)}, 500)

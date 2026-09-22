@@ -219,29 +219,85 @@ int main() {
     const drawerClose = document.getElementById('drawerClose');
 
     // ===== 8-Bit Web Audio Sound Effects Synthesizer =====
-    const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
+    let audioCtx = null;
+    const activeOscillators = new Set();
+
+    function getAudioContext() {
+        try {
+            if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(() => {});
+            }
+        } catch (e) {}
+        return audioCtx;
+    }
+
+    function stopAllSounds() {
+        activeOscillators.forEach(osc => {
+            try {
+                osc.stop();
+                osc.disconnect();
+            } catch (e) {}
+        });
+        activeOscillators.clear();
+    }
 
     function playTone(freq, type, duration, delay = 0) {
-        if (!soundEnabled || !audioCtx) return;
+        if (!soundEnabled) return;
         setTimeout(() => {
+            if (!soundEnabled) return;
+            const ctx = getAudioContext();
+            if (!ctx) return;
+
             try {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
+                const now = ctx.currentTime;
+                const safeDuration = Math.max(duration, 0.04);
+                const stopTime = now + safeDuration;
+
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
                 osc.type = type;
-                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.frequency.setValueAtTime(freq, now);
+
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.linearRampToValueAtTime(0.0001, stopTime);
+
                 osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + duration);
+                gain.connect(ctx.destination);
+
+                activeOscillators.add(osc);
+
+                const cleanup = () => {
+                    activeOscillators.delete(osc);
+                    try {
+                        osc.disconnect();
+                        gain.disconnect();
+                    } catch (e) {}
+                };
+
+                osc.onended = cleanup;
+
+                osc.start(now);
+                osc.stop(stopTime);
+
+                // Hardware clock failsafe: force cleanup and stop after duration
+                setTimeout(() => {
+                    cleanup();
+                    try { osc.stop(); } catch (e) {}
+                }, Math.round(safeDuration * 1000) + 40);
+
             } catch (e) {}
         }, delay);
     }
 
     function playSound(name) {
         if (!soundEnabled) return;
-        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        const ctx = getAudioContext();
+        if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
 
         if (name === 'click') {
             playTone(800, 'square', 0.05);
@@ -255,8 +311,8 @@ int main() {
             playTone(783.99, 'square', 0.08, 140); // G5
             playTone(1046.50, 'square', 0.16, 210); // C6
         } else if (name === 'error') {
-            playTone(220, 'sawtooth', 0.15);
-            playTone(180, 'sawtooth', 0.25, 100);
+            playTone(220, 'sawtooth', 0.12);
+            playTone(180, 'sawtooth', 0.18, 90);
         } else if (name === 'quack') {
             playTone(600, 'triangle', 0.06);
             playTone(750, 'triangle', 0.09, 40);
@@ -269,7 +325,11 @@ int main() {
         localStorage.setItem('codedex_sound', soundEnabled);
         soundIcon.className = soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
         showToast(soundEnabled ? '8-bit Audio Enabled 🔊' : 'Audio Muted 🔇');
-        if (soundEnabled) playSound('success');
+        if (!soundEnabled) {
+            stopAllSounds();
+        } else {
+            playSound('success');
+        }
     });
     soundIcon.className = soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
 
@@ -976,9 +1036,11 @@ int main() {
     let executionPollTimer = null;
 
     async function stopExecution() {
-        if (!activeExecutionSession) return;
+        stopAllSounds();
+        if (!activeExecutionSession && !isExecuting) return;
         const sid = activeExecutionSession;
         activeExecutionSession = null;
+        isExecuting = false;
         if (executionPollTimer) {
             clearTimeout(executionPollTimer);
             clearInterval(executionPollTimer);
@@ -1000,7 +1062,6 @@ int main() {
         abortMsg.textContent = '[Process terminated by user]';
         consoleBody.appendChild(abortMsg);
 
-        isExecuting = false;
         btnRun.classList.remove('running', 'btn-stop-mode');
         btnRun.querySelector('.btn-inner').innerHTML = `<i class="fa-solid fa-play"></i><span>RUN CODE</span><span class="key-hint">Ctrl+↵</span>`;
         statusBadge.className = 'quest-status ready';
@@ -1202,7 +1263,7 @@ int main() {
                         return;
                     }
                     const pollData = await pollRes.json();
-                    if (activeExecutionSession !== sessionId) {
+                    if (!isExecuting || activeExecutionSession !== sessionId) {
                         isPolling = false;
                         return;
                     }
@@ -1272,7 +1333,7 @@ int main() {
                 }
 
                 isPolling = false;
-                if (activeExecutionSession === sessionId) {
+                if (isExecuting && activeExecutionSession === sessionId) {
                     executionPollTimer = setTimeout(pollSession, 120);
                 }
             };
