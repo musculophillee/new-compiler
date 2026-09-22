@@ -644,27 +644,7 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
             with SESSIONS_LOCK:
                 ACTIVE_SESSIONS[session_id] = session
 
-            def read_stream(stream, queue_key):
-                decoder = codecs.getincrementaldecoder("utf-8")("replace")
-                try:
-                    while True:
-                        chunk = stream.read(1)
-                        if not chunk:
-                            break
-                        decoded = decoder.decode(chunk)
-                        if decoded:
-                            with session["lock"]:
-                                session[queue_key].append(decoded)
-                                session["last_activity"] = time.time()
-                except Exception:
-                    pass
-
-            t_out = threading.Thread(target=read_stream, args=(proc.stdout, "stdout_queue"), daemon=True)
-            t_err = threading.Thread(target=read_stream, args=(proc.stderr, "stderr_queue"), daemon=True)
-            session["threads"] = [t_out, t_err]
-            t_out.start()
-            t_err.start()
-
+            # Feed initial stdin if provided
             if initial_stdin:
                 try:
                     stdin_bytes = (initial_stdin if initial_stdin.endswith('\n') else initial_stdin + '\n').encode("utf-8")
@@ -673,39 +653,21 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
                 except Exception:
                     pass
 
-            # Fast-path: Check if process completes quickly (non-interactive or stdin provided)
+            # Fast-path: poll up to 150ms to see if process exits quickly
             fast_start = time.time()
-            while time.time() - fast_start < 0.06:
+            while time.time() - fast_start < 0.15:
                 if proc.poll() is not None:
                     break
                 time.sleep(0.005)
 
             if proc.poll() is not None:
-                for t in session.get("threads", []):
-                    t.join(timeout=0.2)  # give reader threads time to drain the pipe
-                # Drain any remaining bytes directly from the pipe as a fallback
+                # Process finished fast — use communicate() to safely drain all output
                 try:
-                    remaining_out = proc.stdout.read()
-                    if remaining_out:
-                        with session["lock"]:
-                            session["stdout_queue"].append(remaining_out.decode("utf-8", errors="replace"))
+                    out_bytes, err_bytes = proc.communicate(timeout=2)
                 except Exception:
-                    pass
-                try:
-                    remaining_err = proc.stderr.read()
-                    if remaining_err:
-                        with session["lock"]:
-                            session["stderr_queue"].append(remaining_err.decode("utf-8", errors="replace"))
-                except Exception:
-                    pass
-                try:
-                    proc.stdout.close()
-                    proc.stderr.close()
-                except Exception:
-                    pass
-                with session["lock"]:
-                    out_chunk = "".join(session["stdout_queue"])
-                    err_chunk = "".join(session["stderr_queue"])
+                    out_bytes, err_bytes = b"", b""
+                out_chunk = out_bytes.decode("utf-8", errors="replace") if out_bytes else ""
+                err_chunk = err_bytes.decode("utf-8", errors="replace") if err_bytes else ""
                 elapsed = round((time.time() - session["start_time"]) * 1000)
                 exit_code = proc.returncode if proc.returncode is not None else 0
                 temp_dir = session.get("temp_dir")
@@ -725,9 +687,31 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
                 log_request("POST", "/api/execute/start", 200)
                 return
 
+            # Process still alive — start reader threads for interactive/streaming mode
+            def read_stream(stream, queue_key):
+                decoder = codecs.getincrementaldecoder("utf-8")("replace")
+                try:
+                    while True:
+                        chunk = stream.read(4096)
+                        if not chunk:
+                            break
+                        decoded = decoder.decode(chunk)
+                        if decoded:
+                            with session["lock"]:
+                                session[queue_key].append(decoded)
+                                session["last_activity"] = time.time()
+                except Exception:
+                    pass
+
+            t_out = threading.Thread(target=read_stream, args=(proc.stdout, "stdout_queue"), daemon=True)
+            t_err = threading.Thread(target=read_stream, args=(proc.stderr, "stderr_queue"), daemon=True)
+            session["threads"] = [t_out, t_err]
+            t_out.start()
+            t_err.start()
 
             self._send_json({"success": True, "sessionId": session_id, "status": "running"})
             log_request("POST", "/api/execute/start", 200)
+
 
         except Exception as e:
             self._send_json({"success": False, "error": str(e)}, 500)
