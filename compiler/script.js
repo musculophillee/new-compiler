@@ -972,13 +972,56 @@ int main() {
     });
 
     // ===== Code Execution =====
+    let activeExecutionSession = null;
+    let executionPollTimer = null;
+
+    async function stopExecution() {
+        if (!activeExecutionSession) return;
+        const sid = activeExecutionSession;
+        activeExecutionSession = null;
+        if (executionPollTimer) {
+            clearInterval(executionPollTimer);
+            executionPollTimer = null;
+        }
+        try {
+            await fetch('/api/execute/stop', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: sid })
+            });
+        } catch (e) {}
+
+        const termBar = document.getElementById('terminalInteractiveBar');
+        if (termBar) termBar.remove();
+        const abortMsg = document.createElement('div');
+        abortMsg.className = 'out-info';
+        abortMsg.style.cssText = 'color: #f59e0b; margin-top: 8px; font-weight: 600;';
+        abortMsg.textContent = '[Process terminated by user]';
+        consoleBody.appendChild(abortMsg);
+
+        isExecuting = false;
+        btnRun.classList.remove('running', 'btn-stop-mode');
+        btnRun.querySelector('.btn-inner').innerHTML = `<i class="fa-solid fa-play"></i><span>RUN CODE</span><span class="key-hint">Ctrl+↵</span>`;
+        statusBadge.className = 'quest-status ready';
+        statusText.textContent = 'STOPPED';
+        if (sbReady) sbReady.textContent = 'READY';
+    }
+
     async function runCode() {
         // Autosave to cloud before running (named snapshot of the run)
         if (currentUser) performCloudSave(true);
-        if (!editor || isExecuting) return;
+        if (!editor) return;
+
+        // If already executing, clicking button acts as STOP
+        if (isExecuting) {
+            if (activeExecutionSession) {
+                stopExecution();
+            }
+            return;
+        }
 
         const code = editor.getValue();
-        const stdin = stdinInput.value;
+        const stdin = stdinInput ? stdinInput.value : '';
 
         // Switch to Console
         document.querySelector('.qtab[data-pane="console"]').click();
@@ -1036,11 +1079,14 @@ int main() {
                     time: elapsed,
                     exitCode: success ? 0 : 1
                 });
+                isExecuting = false;
+                btnRun.classList.remove('running', 'btn-stop-mode');
+                btnRun.querySelector('.btn-inner').innerHTML = `<i class="fa-solid fa-play"></i><span>RUN CODE</span><span class="key-hint">Ctrl+↵</span>`;
                 return;
             }
 
-            // Server-side Execution
-            const response = await fetch('/api/execute', {
+            // Server-side Interactive Execution
+            const response = await fetch('/api/execute/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1052,9 +1098,162 @@ int main() {
 
             if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
             const data = await response.json();
-            renderOutput(data);
+
+            // If compilation error or unsupported language
+            if (!data.sessionId) {
+                renderOutput(data);
+                isExecuting = false;
+                btnRun.classList.remove('running', 'btn-stop-mode');
+                btnRun.querySelector('.btn-inner').innerHTML = `<i class="fa-solid fa-play"></i><span>RUN CODE</span><span class="key-hint">Ctrl+↵</span>`;
+                return;
+            }
+
+            activeExecutionSession = data.sessionId;
+
+            // Switch button to STOP mode
+            btnRun.classList.remove('running');
+            btnRun.classList.add('btn-stop-mode');
+            btnRun.querySelector('.btn-inner').innerHTML = `<i class="fa-solid fa-square"></i><span>STOP</span><span class="key-hint">ESC</span>`;
+            statusBadge.className = 'quest-status running';
+            statusText.textContent = 'Running...';
+            if (sbReady) sbReady.textContent = 'Running...';
+
+            // Clear console and set up live output container
+            consoleBody.innerHTML = '';
+            const metaEl = document.createElement('div');
+            metaEl.className = 'terminal-meta-bar';
+            metaEl.id = 'liveTerminalMeta';
+            metaEl.innerHTML = `
+                <span class="meta-tag">[ ${LANGUAGES[currentLang].name.toUpperCase()} // RUNNING... ]</span>
+                <span class="terminal-status" style="color: #38bdf8;">● RUNNING</span>
+            `;
+            consoleBody.appendChild(metaEl);
+
+            const outStream = document.createElement('div');
+            outStream.className = 'terminal-live-stream';
+            outStream.style.whiteSpace = 'pre-wrap';
+            consoleBody.appendChild(outStream);
+
+            // Interactive input bar directly in terminal
+            const inputBar = document.createElement('div');
+            inputBar.className = 'terminal-interactive-bar';
+            inputBar.id = 'terminalInteractiveBar';
+            inputBar.innerHTML = `
+                <span class="term-prompt-caret">❯</span>
+                <input type="text" id="termInteractiveInput" class="term-cli-input" placeholder="Type input here and press Enter..." autofocus autocomplete="off" spellcheck="false">
+                <button type="button" id="btnTermSendInput" class="term-send-btn" title="Send input (Enter)">↵</button>
+            `;
+            consoleBody.appendChild(inputBar);
+
+            const termInput = inputBar.querySelector('#termInteractiveInput');
+            const termBtn = inputBar.querySelector('#btnTermSendInput');
+
+            async function submitTerminalInput() {
+                if (!activeExecutionSession || !termInput) return;
+                const val = termInput.value;
+                termInput.value = '';
+                // Echo input in terminal
+                const echo = document.createElement('span');
+                echo.className = 'out-user-input';
+                echo.textContent = val + '\n';
+                outStream.appendChild(echo);
+                consoleBody.scrollTop = consoleBody.scrollHeight;
+
+                try {
+                    await fetch('/api/execute/input', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: activeExecutionSession, input: val })
+                    });
+                } catch (e) {}
+            }
+
+            termInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitTerminalInput();
+                }
+            });
+            termBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                submitTerminalInput();
+            });
+
+            setTimeout(() => { if (termInput) termInput.focus(); }, 50);
+
+            // Polling loop
+            let accumulatedOut = '';
+            let accumulatedErr = '';
+
+            executionPollTimer = setInterval(async () => {
+                if (!activeExecutionSession) {
+                    clearInterval(executionPollTimer);
+                    return;
+                }
+                try {
+                    const pollRes = await fetch(`/api/execute/poll?id=${activeExecutionSession}`);
+                    if (!pollRes.ok) return;
+                    const pollData = await pollRes.json();
+
+                    if (pollData.stdout) {
+                        accumulatedOut += pollData.stdout;
+                        const chunkSpan = document.createElement('span');
+                        chunkSpan.className = 'out-success';
+                        chunkSpan.textContent = pollData.stdout;
+                        outStream.appendChild(chunkSpan);
+                        consoleBody.scrollTop = consoleBody.scrollHeight;
+                    }
+                    if (pollData.stderr) {
+                        accumulatedErr += pollData.stderr;
+                        const errSpan = document.createElement('div');
+                        errSpan.className = 'out-error';
+                        errSpan.textContent = pollData.stderr;
+                        outStream.appendChild(errSpan);
+                        consoleBody.scrollTop = consoleBody.scrollHeight;
+                    }
+
+                    if (pollData.done) {
+                        clearInterval(executionPollTimer);
+                        executionPollTimer = null;
+                        activeExecutionSession = null;
+
+                        if (inputBar && inputBar.parentNode) {
+                            inputBar.remove();
+                        }
+
+                        metaEl.innerHTML = `
+                            <span class="meta-tag">[ ${LANGUAGES[currentLang].name.toUpperCase()} // EXIT: ${pollData.exitCode !== undefined && pollData.exitCode !== null ? pollData.exitCode : 0} ]</span>
+                            <span class="terminal-status">${pollData.success ? '● SUCCESS (' + (pollData.time || 0) + 'ms)' : '▲ FAILED (' + (pollData.time || 0) + 'ms)'}</span>
+                        `;
+
+                        if (pollData.success) {
+                            if (editor) monaco.editor.setModelMarkers(editor.getModel(), 'compiler', []);
+                            statusBadge.className = 'quest-status ready';
+                            statusBadge.innerHTML = `<span class="status-heart"><i class="fa-solid fa-circle"></i></span><span class="status-txt">SUCCESS</span>`;
+                            statusText.textContent = 'SUCCESS';
+                            if (sbReady) sbReady.textContent = 'READY';
+                            playSound('success');
+                        } else {
+                            statusBadge.className = 'quest-status error';
+                            statusBadge.innerHTML = `<span class="status-heart"><i class="fa-solid fa-triangle-exclamation out-error"></i></span><span class="status-txt out-error">FAILED</span>`;
+                            if (sbReady) sbReady.textContent = 'ERROR';
+                            playSound('error');
+                            if (pollData.stderr) {
+                                triggerCrashDiagnostics(pollData.stderr, accumulatedOut);
+                            }
+                        }
+
+                        isExecuting = false;
+                        btnRun.classList.remove('running', 'btn-stop-mode');
+                        btnRun.querySelector('.btn-inner').innerHTML = `<i class="fa-solid fa-play"></i><span>RUN CODE</span><span class="key-hint">Ctrl+↵</span>`;
+                    }
+                } catch (pe) {}
+            }, 120);
 
         } catch (err) {
+            isExecuting = false;
+            btnRun.classList.remove('running', 'btn-stop-mode');
+            btnRun.querySelector('.btn-inner').innerHTML = `<i class="fa-solid fa-play"></i><span>RUN CODE</span><span class="key-hint">Ctrl+↵</span>`;
             renderOutput({
                 success: false,
                 stdout: '',
@@ -1062,10 +1261,6 @@ int main() {
                 time: 0,
                 exitCode: 1
             });
-        } finally {
-            isExecuting = false;
-            btnRun.classList.remove('running');
-            btnRun.querySelector('.btn-inner').innerHTML = `<i class="fa-solid fa-play"></i><span>RUN CODE</span><span class="key-hint">Ctrl+↵</span>`;
         }
     }
 
@@ -1412,6 +1607,19 @@ int main() {
     }
 
     btnRun.addEventListener('click', runCode);
+
+    if (consoleBody) {
+        consoleBody.addEventListener('click', () => {
+            const inp = document.getElementById('termInteractiveInput');
+            if (inp) inp.focus();
+        });
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (isExecuting && activeExecutionSession && (e.key === 'Escape' || (e.ctrlKey && e.key === 'c'))) {
+            stopExecution();
+        }
+    });
 
     // ===== Formatting =====
     async function formatCode() {
@@ -2147,6 +2355,12 @@ int main() {
         updateAuthUI();
         playSound('click');
         showToast('Signed out of Zero Compiler 👋');
+
+        if (window.google && window.google.accounts && window.google.accounts.id) {
+            try {
+                window.google.accounts.id.disableAutoSelect();
+            } catch (e) {}
+        }
 
         if (tokenToRevoke) {
             try {

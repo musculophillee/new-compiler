@@ -420,19 +420,35 @@ body:has(.codedex-app) {
     display: flex;
     align-items: center;
     gap: 8px;
+    width: 100%;
     padding: 7px 10px;
     font-family: var(--font-sans);
     font-size: 12px;
     font-weight: 600;
     color: var(--color-fg-main);
+    background: transparent;
     cursor: pointer;
     border: 1px solid transparent;
+    box-sizing: border-box;
+    text-align: left;
+    text-decoration: none;
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
     transition: background-color 0.08s ease, border-color 0.08s ease;
 }
 
 .dropdown-item:hover {
     background: var(--color-bg-surface);
     border-color: var(--color-border);
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: var(--color-border-subtle);
+    margin: 4px 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .dropdown-item.active {
@@ -1530,6 +1546,89 @@ html[data-theme="darryl-carbon"] .arcade-btn.btn-icon-round.active {
     font-style: italic;
 }
 
+/* Interactive Terminal Input Prompt */
+.terminal-interactive-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1.5px solid var(--color-border);
+    box-shadow: var(--shadow-pixel-xs);
+    border-radius: 4px;
+}
+
+.term-prompt-caret {
+    font-family: var(--font-mono);
+    color: var(--color-accent, #22c55e);
+    font-weight: 800;
+    font-size: 13px;
+    user-select: none;
+    animation: blink-caret 1s infinite;
+}
+
+@keyframes blink-caret {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.term-cli-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--color-fg-main, #ffffff);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 2px 0;
+}
+
+.term-cli-input::placeholder {
+    color: var(--color-fg-muted);
+    font-size: 11px;
+    font-style: italic;
+}
+
+.term-send-btn {
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    border: 1px solid var(--color-border);
+    padding: 3px 8px;
+    font-size: 10.5px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 1px 1px 0px var(--color-border);
+    border-radius: 3px;
+    transition: transform 0.08s ease;
+}
+
+.term-send-btn:hover {
+    transform: translate(-1px, -1px);
+}
+
+.term-send-btn:active {
+    transform: translate(1px, 1px);
+}
+
+.out-user-input {
+    color: #38bdf8;
+    font-weight: 700;
+    font-family: var(--font-mono);
+}
+
+.btn-run-quest.btn-stop-mode {
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    border-color: #b91c1c !important;
+}
+
+.btn-run-quest.btn-stop-mode:hover {
+    background: #dc2626 !important;
+}
+
 /* 7.1.1 Crash Diagnostic & Why Did My Code Crash Engine */
 .crash-diagnostic-banner {
     margin-top: 14px;
@@ -2472,15 +2571,38 @@ html[data-theme="darryl-carbon"] .arcade-btn.btn-icon-round.active {
     color: var(--color-fg-muted);
 }
 
-#btnAuthLogout, #btnHomeLogout {
+#btnAuthLogout, #btnHomeLogout, .dropdown-logout {
     cursor: pointer;
-    transition: background-color 0.1s ease, color 0.1s ease;
+    width: 100%;
+    background: transparent !important;
+    color: #ef4444 !important;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid transparent;
+    outline: none;
+    box-sizing: border-box;
+    text-align: left;
+    text-decoration: none;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: background-color 0.1s ease, color 0.1s ease, border-color 0.1s ease;
 }
 
-#btnAuthLogout:hover, #btnHomeLogout:hover {
+#btnAuthLogout:hover, #btnHomeLogout:hover, .dropdown-logout:hover {
     background: rgba(239, 68, 68, 0.15) !important;
-    color: #dc2626 !important;
-    border-color: #dc2626 !important;
+    color: #ef4444 !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+#btnAuthLogout i, #btnHomeLogout i, .dropdown-logout i {
+    color: inherit;
+    font-size: 12px;
+    transition: transform 0.12s ease;
+}
+
+#btnAuthLogout:hover i, #btnHomeLogout:hover i, .dropdown-logout:hover i {
+    transform: translateX(2px);
 }
 
 /* Zero Compiler Neo-Brutalist Auth Modal */

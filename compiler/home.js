@@ -556,6 +556,12 @@ document.addEventListener('DOMContentLoaded', () => {
         updateAuthUI();
         showToast('Signed out of Zero Compiler 👋');
 
+        if (window.google && window.google.accounts && window.google.accounts.id) {
+            try {
+                window.google.accounts.id.disableAutoSelect();
+            } catch (e) {}
+        }
+
         if (tokenToRevoke) {
             try {
                 await fetch('/api/auth/logout', {

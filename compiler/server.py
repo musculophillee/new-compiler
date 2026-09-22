@@ -18,8 +18,31 @@ import tempfile
 import time
 import urllib.request
 import urllib.error
+import uuid
+import threading
 
 import auth_db
+
+# Interactive Terminal Execution State
+ACTIVE_SESSIONS = {}
+SESSIONS_LOCK = threading.Lock()
+
+def cleanup_inactive_sessions():
+    now = time.time()
+    with SESSIONS_LOCK:
+        to_del = []
+        for sid, sess in list(ACTIVE_SESSIONS.items()):
+            if now - sess.get("last_activity", now) > 60:
+                to_del.append(sid)
+        for sid in to_del:
+            sess = ACTIVE_SESSIONS.pop(sid, None)
+            if sess:
+                try:
+                    sess["proc"].kill()
+                except Exception:
+                    pass
+                shutil.rmtree(sess.get("temp_dir", ""), ignore_errors=True)
+
 
 PORT = int(os.environ.get("PORT", 4000))
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -126,6 +149,9 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         routes = {
             "/api/execute": self.handle_execute,
+            "/api/execute/start": self.handle_execute_start,
+            "/api/execute/input": self.handle_execute_input,
+            "/api/execute/stop": self.handle_execute_stop,
             "/api/ai": self.handle_ai,
             "/api/format": self.handle_format,
             "/api/health": self.handle_health,
@@ -159,7 +185,9 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         clean_path = self.path.split('?')[0].rstrip('/')
-        if self.path.startswith("/api/health"):
+        if clean_path == "/api/execute/poll":
+            self.handle_execute_poll()
+        elif self.path.startswith("/api/health"):
             self.handle_health()
         elif self.path.startswith("/api/auth/me"):
             self.handle_auth_me()
@@ -447,6 +475,237 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             self._send_json({"error": str(e), "success": False}, 500)
             log_request("POST", "/api/execute", 500)
+
+    def handle_execute_start(self):
+        cleanup_inactive_sessions()
+        try:
+            payload = self._read_json()
+            language = payload.get("language", "python").lower()
+            code = payload.get("code", "")
+            initial_stdin = payload.get("stdin", "")
+            
+            temp_dir = tempfile.mkdtemp()
+            cmd = None
+            
+            if language == "python":
+                file_path = os.path.join(temp_dir, "script.py")
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(code)
+                cmd = [sys.executable, "-u", file_path]
+                
+            elif language in ("cpp", "c++"):
+                if not GXX_PATH or not os.path.exists(GXX_PATH):
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                    self._send_json({"success": False, "stderr": "C++ compiler (g++) not found.", "exitCode": 1})
+                    return
+                src = os.path.join(temp_dir, "main.cpp")
+                exe = os.path.join(temp_dir, "main.exe" if os.name == "nt" else "main.out")
+                unbuffer_header = "#include <stdio.h>\n#ifdef __GNUC__\nstatic void __attribute__((constructor)) __zero_unbuffer(void) { setvbuf(stdout, (char*)0, 4, 0); setvbuf(stderr, (char*)0, 4, 0); }\n#endif\n"
+                with open(src, "w", encoding="utf-8") as f:
+                    f.write(unbuffer_header + code)
+                comp = subprocess.run([GXX_PATH, "-O2", src, "-o", exe], capture_output=True, text=True, timeout=15, env=os.environ)
+                if comp.returncode != 0:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                    self._send_json({"success": False, "stderr": "Compilation Error:\n" + comp.stderr, "exitCode": comp.returncode})
+                    return
+                if os.name != "nt":
+                    try: os.chmod(exe, 0o755)
+                    except Exception: pass
+                cmd = [exe]
+
+            elif language == "c":
+                compiler = GCC_PATH or GXX_PATH
+                if not compiler or not os.path.exists(compiler):
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                    self._send_json({"success": False, "stderr": "C compiler (gcc) not found.", "exitCode": 1})
+                    return
+                src = os.path.join(temp_dir, "main.c")
+                exe = os.path.join(temp_dir, "main.exe" if os.name == "nt" else "main.out")
+                unbuffer_header = "#include <stdio.h>\n#ifdef __GNUC__\nstatic void __attribute__((constructor)) __zero_unbuffer(void) { setvbuf(stdout, (char*)0, 4, 0); setvbuf(stderr, (char*)0, 4, 0); }\n#endif\n"
+                with open(src, "w", encoding="utf-8") as f:
+                    f.write(unbuffer_header + code)
+                comp = subprocess.run([compiler, "-O2", src, "-o", exe], capture_output=True, text=True, timeout=15, env=os.environ)
+                if comp.returncode != 0:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                    self._send_json({"success": False, "stderr": "Compilation Error:\n" + comp.stderr, "exitCode": comp.returncode})
+                    return
+                if os.name != "nt":
+                    try: os.chmod(exe, 0o755)
+                    except Exception: pass
+                cmd = [exe]
+
+            elif language == "java":
+                if not JAVAC_PATH or not os.path.exists(JAVAC_PATH):
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                    self._send_json({"success": False, "stderr": "Java compiler (javac) not found.", "exitCode": 1})
+                    return
+                src = os.path.join(temp_dir, "Main.java")
+                with open(src, "w", encoding="utf-8") as f:
+                    f.write(code)
+                comp = subprocess.run([JAVAC_PATH, src], capture_output=True, text=True, timeout=15, env=os.environ)
+                if comp.returncode != 0:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                    self._send_json({"success": False, "stderr": "Compilation Error:\n" + comp.stderr, "exitCode": comp.returncode})
+                    return
+                cmd = [JAVA_PATH or "java", "-cp", temp_dir, "Main"]
+
+            elif language == "go":
+                if not GO_PATH:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                    self._send_json({"success": False, "stderr": "Go compiler not found.", "exitCode": 1})
+                    return
+                src = os.path.join(temp_dir, "main.go")
+                with open(src, "w", encoding="utf-8") as f:
+                    f.write(code)
+                cmd = [GO_PATH, "run", src]
+
+            elif language in ("javascript", "js", "typescript"):
+                shutil.rmtree(temp_dir, ignore_errors=True)
+                self._send_json({"client_eval": True, "success": True})
+                return
+            else:
+                shutil.rmtree(temp_dir, ignore_errors=True)
+                self._send_json({"success": False, "stderr": f"Unsupported language: {language}", "exitCode": 1})
+                return
+
+            session_id = uuid.uuid4().hex
+            proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=0,
+                cwd=temp_dir,
+                env=os.environ
+            )
+            
+            session = {
+                "proc": proc,
+                "temp_dir": temp_dir,
+                "stdout_queue": [],
+                "stderr_queue": [],
+                "start_time": time.time(),
+                "last_activity": time.time(),
+                "lock": threading.Lock(),
+                "done": False
+            }
+            
+            with SESSIONS_LOCK:
+                ACTIVE_SESSIONS[session_id] = session
+
+            def read_stream(stream, queue_key):
+                try:
+                    while True:
+                        c = stream.read(1)
+                        if not c:
+                            break
+                        with session["lock"]:
+                            session[queue_key].append(c)
+                            session["last_activity"] = time.time()
+                except Exception:
+                    pass
+
+            threading.Thread(target=read_stream, args=(proc.stdout, "stdout_queue"), daemon=True).start()
+            threading.Thread(target=read_stream, args=(proc.stderr, "stderr_queue"), daemon=True).start()
+
+            if initial_stdin:
+                try:
+                    proc.stdin.write(initial_stdin if initial_stdin.endswith('\n') else initial_stdin + '\n')
+                    proc.stdin.flush()
+                except Exception:
+                    pass
+
+            self._send_json({"success": True, "sessionId": session_id, "status": "running"})
+            log_request("POST", "/api/execute/start", 200)
+
+        except Exception as e:
+            self._send_json({"success": False, "error": str(e)}, 500)
+            log_request("POST", "/api/execute/start", 500)
+
+    def handle_execute_poll(self):
+        try:
+            from urllib.parse import urlparse, parse_qs
+            query = parse_qs(urlparse(self.path).query)
+            session_id = query.get("id", [""])[0]
+            
+            with SESSIONS_LOCK:
+                session = ACTIVE_SESSIONS.get(session_id)
+                
+            if not session:
+                self._send_json({"error": "Session not found or expired", "done": True, "exitCode": -1})
+                return
+
+            with session["lock"]:
+                out_chunk = "".join(session["stdout_queue"])
+                session["stdout_queue"].clear()
+                err_chunk = "".join(session["stderr_queue"])
+                session["stderr_queue"].clear()
+                session["last_activity"] = time.time()
+
+            proc = session["proc"]
+            poll_status = proc.poll()
+            is_done = poll_status is not None
+
+            elapsed = round((time.time() - session["start_time"]) * 1000)
+
+            if is_done:
+                session["done"] = True
+                with SESSIONS_LOCK:
+                    ACTIVE_SESSIONS.pop(session_id, None)
+                shutil.rmtree(session.get("temp_dir", ""), ignore_errors=True)
+
+            self._send_json({
+                "stdout": out_chunk,
+                "stderr": err_chunk,
+                "done": is_done,
+                "exitCode": proc.returncode if is_done else None,
+                "time": elapsed,
+                "success": is_done and (proc.returncode == 0)
+            })
+        except Exception as e:
+            self._send_json({"error": str(e), "done": True}, 500)
+
+    def handle_execute_input(self):
+        try:
+            payload = self._read_json()
+            session_id = payload.get("id", "")
+            text = payload.get("input", "")
+            
+            with SESSIONS_LOCK:
+                session = ACTIVE_SESSIONS.get(session_id)
+                
+            if not session:
+                self._send_json({"success": False, "error": "Session not found"}, 404)
+                return
+
+            proc = session["proc"]
+            if proc.poll() is None:
+                input_line = text if text.endswith('\n') else text + '\n'
+                proc.stdin.write(input_line)
+                proc.stdin.flush()
+                session["last_activity"] = time.time()
+                self._send_json({"success": True})
+            else:
+                self._send_json({"success": False, "error": "Process already terminated"})
+        except Exception as e:
+            self._send_json({"success": False, "error": str(e)}, 500)
+
+    def handle_execute_stop(self):
+        try:
+            payload = self._read_json()
+            session_id = payload.get("id", "")
+            with SESSIONS_LOCK:
+                session = ACTIVE_SESSIONS.pop(session_id, None)
+            if session:
+                try:
+                    session["proc"].kill()
+                except Exception:
+                    pass
+                shutil.rmtree(session.get("temp_dir", ""), ignore_errors=True)
+            self._send_json({"success": True})
+        except Exception as e:
+            self._send_json({"success": False, "error": str(e)}, 500)
 
     def handle_format(self):
         try:
@@ -1906,8 +2165,9 @@ if __name__ == "__main__":
                         return {"success": False, "stdout": "", "stderr": "C++ compiler (g++) not found.", "exitCode": 1, "time": 0}
                     src = os.path.join(temp_dir, "main.cpp")
                     exe = os.path.join(temp_dir, "main.exe" if os.name == "nt" else "main.out")
+                    unbuffer_header = "#include <stdio.h>\n#ifdef __GNUC__\nstatic void __attribute__((constructor)) __zero_unbuffer(void) { setvbuf(stdout, (char*)0, 4, 0); setvbuf(stderr, (char*)0, 4, 0); }\n#endif\n"
                     with open(src, "w", encoding="utf-8") as f:
-                        f.write(code)
+                        f.write(unbuffer_header + code)
                     comp_flags = [GXX_PATH, "-O2", src, "-o", exe]
                     comp = subprocess.run(comp_flags, capture_output=True, text=True, timeout=15, env=os.environ)
                     if comp.returncode != 0:
@@ -1925,8 +2185,9 @@ if __name__ == "__main__":
                         return {"success": False, "stdout": "", "stderr": "C compiler (gcc) not found.", "exitCode": 1, "time": 0}
                     src = os.path.join(temp_dir, "main.c")
                     exe = os.path.join(temp_dir, "main.exe" if os.name == "nt" else "main.out")
+                    unbuffer_header = "#include <stdio.h>\n#ifdef __GNUC__\nstatic void __attribute__((constructor)) __zero_unbuffer(void) { setvbuf(stdout, (char*)0, 4, 0); setvbuf(stderr, (char*)0, 4, 0); }\n#endif\n"
                     with open(src, "w", encoding="utf-8") as f:
-                        f.write(code)
+                        f.write(unbuffer_header + code)
                     comp_flags = [compiler, "-O2", src, "-o", exe]
                     comp = subprocess.run(comp_flags, capture_output=True, text=True, timeout=15, env=os.environ)
                     if comp.returncode != 0:
