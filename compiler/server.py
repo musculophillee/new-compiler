@@ -25,6 +25,7 @@ import auth_db
 
 # Interactive Terminal Execution State
 ACTIVE_SESSIONS = {}
+FINISHED_SESSIONS = {}
 SESSIONS_LOCK = threading.Lock()
 
 def cleanup_inactive_sessions():
@@ -42,6 +43,13 @@ def cleanup_inactive_sessions():
                 except Exception:
                     pass
                 shutil.rmtree(sess.get("temp_dir", ""), ignore_errors=True)
+
+        fin_del = []
+        for sid, fin in list(FINISHED_SESSIONS.items()):
+            if now - fin.get("completed_at", now) > 30:
+                fin_del.append(sid)
+        for sid in fin_del:
+            FINISHED_SESSIONS.pop(sid, None)
 
 
 PORT = int(os.environ.get("PORT", 4000))
@@ -500,7 +508,32 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
                     return
                 src = os.path.join(temp_dir, "main.cpp")
                 exe = os.path.join(temp_dir, "main.exe" if os.name == "nt" else "main.out")
-                unbuffer_header = "#include <stdio.h>\n#ifdef __GNUC__\nstatic void __attribute__((constructor)) __zero_unbuffer(void) { setvbuf(stdout, (char*)0, 4, 0); setvbuf(stderr, (char*)0, 4, 0); }\n#endif\n"
+                unbuffer_header = (
+                    "#include <stdio.h>\n"
+                    "#include <iostream>\n"
+                    "#ifdef __GNUC__\n"
+                    "static void __attribute__((constructor)) __zero_unbuffer(void) {\n"
+                    "    setbuf(stdout, NULL);\n"
+                    "    setbuf(stderr, NULL);\n"
+                    "#ifdef _IONBF\n"
+                    "    setvbuf(stdout, NULL, _IONBF, 0);\n"
+                    "    setvbuf(stderr, NULL, _IONBF, 0);\n"
+                    "#endif\n"
+                    "}\n"
+                    "#endif\n"
+                    "struct __ZeroUnbufferCpp {\n"
+                    "    __ZeroUnbufferCpp() {\n"
+                    "        setbuf(stdout, NULL);\n"
+                    "        setbuf(stderr, NULL);\n"
+                    "#ifdef _IONBF\n"
+                    "        setvbuf(stdout, NULL, _IONBF, 0);\n"
+                    "        setvbuf(stderr, NULL, _IONBF, 0);\n"
+                    "#endif\n"
+                    "        std::cout.setf(std::ios::unitbuf);\n"
+                    "        std::cerr.setf(std::ios::unitbuf);\n"
+                    "    }\n"
+                    "} __zero_unbuffer_cpp_instance;\n"
+                )
                 with open(src, "w", encoding="utf-8") as f:
                     f.write(unbuffer_header + code)
                 comp = subprocess.run([GXX_PATH, "-O2", src, "-o", exe], capture_output=True, text=True, timeout=15, env=os.environ)
@@ -521,7 +554,19 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
                     return
                 src = os.path.join(temp_dir, "main.c")
                 exe = os.path.join(temp_dir, "main.exe" if os.name == "nt" else "main.out")
-                unbuffer_header = "#include <stdio.h>\n#ifdef __GNUC__\nstatic void __attribute__((constructor)) __zero_unbuffer(void) { setvbuf(stdout, (char*)0, 4, 0); setvbuf(stderr, (char*)0, 4, 0); }\n#endif\n"
+                unbuffer_header = (
+                    "#include <stdio.h>\n"
+                    "#ifdef __GNUC__\n"
+                    "static void __attribute__((constructor)) __zero_unbuffer(void) {\n"
+                    "    setbuf(stdout, NULL);\n"
+                    "    setbuf(stderr, NULL);\n"
+                    "#ifdef _IONBF\n"
+                    "    setvbuf(stdout, NULL, _IONBF, 0);\n"
+                    "    setvbuf(stderr, NULL, _IONBF, 0);\n"
+                    "#endif\n"
+                    "}\n"
+                    "#endif\n"
+                )
                 with open(src, "w", encoding="utf-8") as f:
                     f.write(unbuffer_header + code)
                 comp = subprocess.run([compiler, "-O2", src, "-o", exe], capture_output=True, text=True, timeout=15, env=os.environ)
@@ -574,7 +619,6 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True,
                 bufsize=0,
                 cwd=temp_dir,
                 env=os.environ
@@ -588,6 +632,7 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
                 "start_time": time.time(),
                 "last_activity": time.time(),
                 "lock": threading.Lock(),
+                "threads": [],
                 "done": False
             }
             
@@ -597,21 +642,25 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
             def read_stream(stream, queue_key):
                 try:
                     while True:
-                        c = stream.read(1)
-                        if not c:
+                        chunk = stream.read(1)
+                        if not chunk:
                             break
                         with session["lock"]:
-                            session[queue_key].append(c)
+                            session[queue_key].append(chunk.decode("utf-8", errors="replace"))
                             session["last_activity"] = time.time()
                 except Exception:
                     pass
 
-            threading.Thread(target=read_stream, args=(proc.stdout, "stdout_queue"), daemon=True).start()
-            threading.Thread(target=read_stream, args=(proc.stderr, "stderr_queue"), daemon=True).start()
+            t_out = threading.Thread(target=read_stream, args=(proc.stdout, "stdout_queue"), daemon=True)
+            t_err = threading.Thread(target=read_stream, args=(proc.stderr, "stderr_queue"), daemon=True)
+            session["threads"] = [t_out, t_err]
+            t_out.start()
+            t_err.start()
 
             if initial_stdin:
                 try:
-                    proc.stdin.write(initial_stdin if initial_stdin.endswith('\n') else initial_stdin + '\n')
+                    stdin_bytes = (initial_stdin if initial_stdin.endswith('\n') else initial_stdin + '\n').encode("utf-8")
+                    proc.stdin.write(stdin_bytes)
                     proc.stdin.flush()
                 except Exception:
                     pass
@@ -631,9 +680,28 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
             
             with SESSIONS_LOCK:
                 session = ACTIVE_SESSIONS.get(session_id)
+                finished = FINISHED_SESSIONS.get(session_id)
                 
             if not session:
-                self._send_json({"error": "Session not found or expired", "done": True, "exitCode": -1})
+                if finished:
+                    self._send_json({
+                        "stdout": "",
+                        "stderr": "",
+                        "done": True,
+                        "exitCode": finished.get("exitCode", 0),
+                        "time": finished.get("time", 0),
+                        "success": finished.get("success", True)
+                    })
+                else:
+                    self._send_json({
+                        "stdout": "",
+                        "stderr": "",
+                        "done": True,
+                        "exitCode": 0,
+                        "time": 0,
+                        "success": True,
+                        "expired": True
+                    })
                 return
 
             with session["lock"]:
@@ -647,24 +715,53 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
             poll_status = proc.poll()
             is_done = poll_status is not None
 
-            elapsed = round((time.time() - session["start_time"]) * 1000)
-
             if is_done:
-                session["done"] = True
+                for t in session.get("threads", []):
+                    t.join(timeout=0.08)
+                with session["lock"]:
+                    if session["stdout_queue"]:
+                        out_chunk += "".join(session["stdout_queue"])
+                        session["stdout_queue"].clear()
+                    if session["stderr_queue"]:
+                        err_chunk += "".join(session["stderr_queue"])
+                        session["stderr_queue"].clear()
+
+                elapsed = round((time.time() - session["start_time"]) * 1000)
+                exit_code = proc.returncode if proc.returncode is not None else 0
+                success = (exit_code == 0)
+
                 with SESSIONS_LOCK:
+                    FINISHED_SESSIONS[session_id] = {
+                        "exitCode": exit_code,
+                        "success": success,
+                        "time": elapsed,
+                        "completed_at": time.time()
+                    }
                     ACTIVE_SESSIONS.pop(session_id, None)
+
                 shutil.rmtree(session.get("temp_dir", ""), ignore_errors=True)
 
+                self._send_json({
+                    "stdout": out_chunk,
+                    "stderr": err_chunk,
+                    "done": True,
+                    "exitCode": exit_code,
+                    "time": elapsed,
+                    "success": success
+                })
+                return
+
+            elapsed = round((time.time() - session["start_time"]) * 1000)
             self._send_json({
                 "stdout": out_chunk,
                 "stderr": err_chunk,
-                "done": is_done,
-                "exitCode": proc.returncode if is_done else None,
+                "done": False,
+                "exitCode": None,
                 "time": elapsed,
-                "success": is_done and (proc.returncode == 0)
+                "success": None
             })
         except Exception as e:
-            self._send_json({"error": str(e), "done": True}, 500)
+            self._send_json({"error": str(e), "done": True, "exitCode": 0, "success": True}, 500)
 
     def handle_execute_input(self):
         try:
@@ -682,7 +779,7 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
             proc = session["proc"]
             if proc.poll() is None:
                 input_line = text if text.endswith('\n') else text + '\n'
-                proc.stdin.write(input_line)
+                proc.stdin.write(input_line.encode("utf-8"))
                 proc.stdin.flush()
                 session["last_activity"] = time.time()
                 self._send_json({"success": True})
@@ -2165,7 +2262,32 @@ if __name__ == "__main__":
                         return {"success": False, "stdout": "", "stderr": "C++ compiler (g++) not found.", "exitCode": 1, "time": 0}
                     src = os.path.join(temp_dir, "main.cpp")
                     exe = os.path.join(temp_dir, "main.exe" if os.name == "nt" else "main.out")
-                    unbuffer_header = "#include <stdio.h>\n#ifdef __GNUC__\nstatic void __attribute__((constructor)) __zero_unbuffer(void) { setvbuf(stdout, (char*)0, 4, 0); setvbuf(stderr, (char*)0, 4, 0); }\n#endif\n"
+                    unbuffer_header = (
+                        "#include <stdio.h>\n"
+                        "#include <iostream>\n"
+                        "#ifdef __GNUC__\n"
+                        "static void __attribute__((constructor)) __zero_unbuffer(void) {\n"
+                        "    setbuf(stdout, NULL);\n"
+                        "    setbuf(stderr, NULL);\n"
+                        "#ifdef _IONBF\n"
+                        "    setvbuf(stdout, NULL, _IONBF, 0);\n"
+                        "    setvbuf(stderr, NULL, _IONBF, 0);\n"
+                        "#endif\n"
+                        "}\n"
+                        "#endif\n"
+                        "struct __ZeroUnbufferCpp {\n"
+                        "    __ZeroUnbufferCpp() {\n"
+                        "        setbuf(stdout, NULL);\n"
+                        "        setbuf(stderr, NULL);\n"
+                        "#ifdef _IONBF\n"
+                        "        setvbuf(stdout, NULL, _IONBF, 0);\n"
+                        "        setvbuf(stderr, NULL, _IONBF, 0);\n"
+                        "#endif\n"
+                        "        std::cout.setf(std::ios::unitbuf);\n"
+                        "        std::cerr.setf(std::ios::unitbuf);\n"
+                        "    }\n"
+                        "} __zero_unbuffer_cpp_instance;\n"
+                    )
                     with open(src, "w", encoding="utf-8") as f:
                         f.write(unbuffer_header + code)
                     comp_flags = [GXX_PATH, "-O2", src, "-o", exe]
@@ -2185,7 +2307,19 @@ if __name__ == "__main__":
                         return {"success": False, "stdout": "", "stderr": "C compiler (gcc) not found.", "exitCode": 1, "time": 0}
                     src = os.path.join(temp_dir, "main.c")
                     exe = os.path.join(temp_dir, "main.exe" if os.name == "nt" else "main.out")
-                    unbuffer_header = "#include <stdio.h>\n#ifdef __GNUC__\nstatic void __attribute__((constructor)) __zero_unbuffer(void) { setvbuf(stdout, (char*)0, 4, 0); setvbuf(stderr, (char*)0, 4, 0); }\n#endif\n"
+                    unbuffer_header = (
+                        "#include <stdio.h>\n"
+                        "#ifdef __GNUC__\n"
+                        "static void __attribute__((constructor)) __zero_unbuffer(void) {\n"
+                        "    setbuf(stdout, NULL);\n"
+                        "    setbuf(stderr, NULL);\n"
+                        "#ifdef _IONBF\n"
+                        "    setvbuf(stdout, NULL, _IONBF, 0);\n"
+                        "    setvbuf(stderr, NULL, _IONBF, 0);\n"
+                        "#endif\n"
+                        "}\n"
+                        "#endif\n"
+                    )
                     with open(src, "w", encoding="utf-8") as f:
                         f.write(unbuffer_header + code)
                     comp_flags = [compiler, "-O2", src, "-o", exe]

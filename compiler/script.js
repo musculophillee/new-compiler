@@ -980,6 +980,7 @@ int main() {
         const sid = activeExecutionSession;
         activeExecutionSession = null;
         if (executionPollTimer) {
+            clearTimeout(executionPollTimer);
             clearInterval(executionPollTimer);
             executionPollTimer = null;
         }
@@ -1184,16 +1185,27 @@ int main() {
             // Polling loop
             let accumulatedOut = '';
             let accumulatedErr = '';
+            let isPolling = false;
 
-            executionPollTimer = setInterval(async () => {
-                if (!activeExecutionSession) {
-                    clearInterval(executionPollTimer);
-                    return;
-                }
+            const pollSession = async () => {
+                if (!activeExecutionSession || isPolling) return;
+                isPolling = true;
+                const sessionId = activeExecutionSession;
+
                 try {
-                    const pollRes = await fetch(`/api/execute/poll?id=${activeExecutionSession}`);
-                    if (!pollRes.ok) return;
+                    const pollRes = await fetch(`/api/execute/poll?id=${sessionId}`);
+                    if (!pollRes.ok) {
+                        isPolling = false;
+                        if (activeExecutionSession === sessionId) {
+                            executionPollTimer = setTimeout(pollSession, 120);
+                        }
+                        return;
+                    }
                     const pollData = await pollRes.json();
+                    if (activeExecutionSession !== sessionId) {
+                        isPolling = false;
+                        return;
+                    }
 
                     if (pollData.stdout) {
                         accumulatedOut += pollData.stdout;
@@ -1213,20 +1225,26 @@ int main() {
                     }
 
                     if (pollData.done) {
-                        clearInterval(executionPollTimer);
-                        executionPollTimer = null;
                         activeExecutionSession = null;
+                        if (executionPollTimer) {
+                            clearTimeout(executionPollTimer);
+                            clearInterval(executionPollTimer);
+                            executionPollTimer = null;
+                        }
 
                         if (inputBar && inputBar.parentNode) {
                             inputBar.remove();
                         }
 
+                        const exitCode = (pollData.exitCode !== undefined && pollData.exitCode !== null) ? pollData.exitCode : 0;
+                        const isSuccess = pollData.success !== undefined ? Boolean(pollData.success) : (exitCode === 0);
+
                         metaEl.innerHTML = `
-                            <span class="meta-tag">[ ${LANGUAGES[currentLang].name.toUpperCase()} // EXIT: ${pollData.exitCode !== undefined && pollData.exitCode !== null ? pollData.exitCode : 0} ]</span>
-                            <span class="terminal-status">${pollData.success ? '● SUCCESS (' + (pollData.time || 0) + 'ms)' : '▲ FAILED (' + (pollData.time || 0) + 'ms)'}</span>
+                            <span class="meta-tag">[ ${LANGUAGES[currentLang].name.toUpperCase()} // EXIT: ${exitCode} ]</span>
+                            <span class="terminal-status">${isSuccess ? '● SUCCESS (' + (pollData.time || 0) + 'ms)' : '▲ FAILED (' + (pollData.time || 0) + 'ms)'}</span>
                         `;
 
-                        if (pollData.success) {
+                        if (isSuccess) {
                             if (editor) monaco.editor.setModelMarkers(editor.getModel(), 'compiler', []);
                             statusBadge.className = 'quest-status ready';
                             statusBadge.innerHTML = `<span class="status-heart"><i class="fa-solid fa-circle"></i></span><span class="status-txt">SUCCESS</span>`;
@@ -1239,16 +1257,27 @@ int main() {
                             if (sbReady) sbReady.textContent = 'ERROR';
                             playSound('error');
                             if (pollData.stderr) {
-                                triggerCrashDiagnostics(pollData.stderr, accumulatedOut);
+                                renderCrashBanner(pollData.stderr, exitCode);
                             }
                         }
 
                         isExecuting = false;
                         btnRun.classList.remove('running', 'btn-stop-mode');
                         btnRun.querySelector('.btn-inner').innerHTML = `<i class="fa-solid fa-play"></i><span>RUN CODE</span><span class="key-hint">Ctrl+↵</span>`;
+                        isPolling = false;
+                        return;
                     }
-                } catch (pe) {}
-            }, 120);
+                } catch (pe) {
+                    console.error("Poll error:", pe);
+                }
+
+                isPolling = false;
+                if (activeExecutionSession === sessionId) {
+                    executionPollTimer = setTimeout(pollSession, 120);
+                }
+            };
+
+            executionPollTimer = setTimeout(pollSession, 50);
 
         } catch (err) {
             isExecuting = false;
@@ -1262,6 +1291,72 @@ int main() {
                 exitCode: 1
             });
         }
+    }
+
+    function renderCrashBanner(stderrText, exitCode) {
+        if (!stderrText) return;
+        let errLineNum = null;
+        let errMsgText = 'Compiler Error';
+        const lineMatch = stderrText.match(/(?:[a-zA-Z0-9_\-\\\/.]+):(\d+):(?:\d+:)?\s*error:\s*(.*)/i) ||
+                          stderrText.match(/line (\d+)/i);
+        if (lineMatch) {
+            errLineNum = parseInt(lineMatch[1], 10);
+            if (lineMatch[2]) errMsgText = lineMatch[2].trim();
+            if (editor && errLineNum) {
+                monaco.editor.setModelMarkers(editor.getModel(), 'compiler', [{
+                    startLineNumber: errLineNum,
+                    startColumn: 1,
+                    endLineNumber: errLineNum,
+                    endColumn: 100,
+                    message: errMsgText,
+                    severity: monaco.MarkerSeverity.Error
+                }]);
+                editor.revealLineInCenter(errLineNum);
+            }
+        }
+
+        const crashBanner = document.createElement('div');
+        crashBanner.className = 'crash-diagnostic-banner';
+        crashBanner.innerHTML = `
+            <div class="crash-diagnostic-header">
+                <div class="crash-badge"><i class="fa-solid fa-triangle-exclamation"></i> EXECUTION CRASH DETECTED</div>
+                <span class="crash-exit-code">[ ${LANGUAGES[currentLang].name.toUpperCase()} // EXIT: ${exitCode !== undefined ? exitCode : 1} ]</span>
+            </div>
+            <div class="crash-diagnostic-intro">
+                <div class="crash-avatar-icon"><i class="fa-solid fa-burst"></i></div>
+                <div class="crash-intro-text">
+                    <div class="crash-question">Why did my code crash?</div>
+                    <p class="crash-hint">${errLineNum ? 'Failure detected near line ' + errLineNum + '. ' : ''}Click below to have the AI Agent explain the exact cause of this crash, breakdown what's wrong, and synthesize the fix.</p>
+                </div>
+            </div>
+            <div class="crash-action-row" id="crashActionRow">
+                <button class="btn-why-crash" id="btnWhyCrash">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>WHY DID MY CODE CRASH?</span>
+                </button>
+                <button class="btn-auto-fix-secondary" id="btnAutoFixQuick">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>1-CLICK AUTO-FIX</span>
+                </button>
+            </div>
+            <div class="crash-diagnosis-container" id="crashDiagContainer" style="display:none;"></div>
+        `;
+        consoleBody.appendChild(crashBanner);
+
+        const btnWhyCrash = crashBanner.querySelector('#btnWhyCrash');
+        const btnAutoFixQuick = crashBanner.querySelector('#btnAutoFixQuick');
+
+        btnWhyCrash.addEventListener('click', () => {
+            requireAuth(() => {
+                diagnoseCrashAndFix(stderrText || consoleBody.textContent, crashBanner, false);
+            });
+        });
+
+        btnAutoFixQuick.addEventListener('click', () => {
+            requireAuth(() => {
+                diagnoseCrashAndFix(stderrText || consoleBody.textContent, crashBanner, true);
+            });
+        });
     }
 
     function renderOutput(data) {
@@ -1312,71 +1407,8 @@ int main() {
             if (sbReady) sbReady.textContent = 'ERROR';
             playSound('error');
 
-            // Highlight error in Monaco Editor & Render Auto-Fix Banner
-            let errLineNum = null;
-            let errMsgText = 'Compiler Error';
             if (data.stderr) {
-                const lineMatch = data.stderr.match(/(?:[a-zA-Z0-9_\-\\\/.]+):(\d+):(?:\d+:)?\s*error:\s*(.*)/i) ||
-                                  data.stderr.match(/line (\d+)/i);
-                if (lineMatch) {
-                    errLineNum = parseInt(lineMatch[1], 10);
-                    if (lineMatch[2]) errMsgText = lineMatch[2].trim();
-                    if (editor && errLineNum) {
-                        monaco.editor.setModelMarkers(editor.getModel(), 'compiler', [{
-                            startLineNumber: errLineNum,
-                            startColumn: 1,
-                            endLineNumber: errLineNum,
-                            endColumn: 100,
-                            message: errMsgText,
-                            severity: monaco.MarkerSeverity.Error
-                        }]);
-                        editor.revealLineInCenter(errLineNum);
-                    }
-                }
-
-                // Render Interactive "Why did my code crash?" Neo-Brutalist Banner in Console
-                const crashBanner = document.createElement('div');
-                crashBanner.className = 'crash-diagnostic-banner';
-                crashBanner.innerHTML = `
-                    <div class="crash-diagnostic-header">
-                        <div class="crash-badge"><i class="fa-solid fa-triangle-exclamation"></i> EXECUTION CRASH DETECTED</div>
-                        <span class="crash-exit-code">[ ${LANGUAGES[currentLang].name.toUpperCase()} // EXIT: ${data.exitCode !== undefined ? data.exitCode : 1} ]</span>
-                    </div>
-                    <div class="crash-diagnostic-intro">
-                        <div class="crash-avatar-icon"><i class="fa-solid fa-burst"></i></div>
-                        <div class="crash-intro-text">
-                            <div class="crash-question">Why did my code crash?</div>
-                            <p class="crash-hint">${errLineNum ? 'Failure detected near line ' + errLineNum + '. ' : ''}Click below to have the AI Agent explain the exact cause of this crash, breakdown what's wrong, and synthesize the fix.</p>
-                        </div>
-                    </div>
-                    <div class="crash-action-row" id="crashActionRow">
-                        <button class="btn-why-crash" id="btnWhyCrash">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i>
-                            <span>WHY DID MY CODE CRASH?</span>
-                        </button>
-                        <button class="btn-auto-fix-secondary" id="btnAutoFixQuick">
-                            <i class="fa-solid fa-bolt"></i>
-                            <span>1-CLICK AUTO-FIX</span>
-                        </button>
-                    </div>
-                    <div class="crash-diagnosis-container" id="crashDiagContainer" style="display:none;"></div>
-                `;
-                consoleBody.appendChild(crashBanner);
-
-                const btnWhyCrash = crashBanner.querySelector('#btnWhyCrash');
-                const btnAutoFixQuick = crashBanner.querySelector('#btnAutoFixQuick');
-
-                btnWhyCrash.addEventListener('click', () => {
-                    requireAuth(() => {
-                        diagnoseCrashAndFix(data.stderr || consoleBody.textContent, crashBanner, false);
-                    });
-                });
-
-                btnAutoFixQuick.addEventListener('click', () => {
-                    requireAuth(() => {
-                        diagnoseCrashAndFix(data.stderr || consoleBody.textContent, crashBanner, true);
-                    });
-                });
+                renderCrashBanner(data.stderr, data.exitCode);
             }
         }
 
