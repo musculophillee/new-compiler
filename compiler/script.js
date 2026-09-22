@@ -1368,16 +1368,27 @@ int main() {
             outStream.style.whiteSpace = 'pre-wrap';
             consoleBody.appendChild(outStream);
 
-            // Interactive input bar directly in terminal
+            // Interactive input bar directly in terminal — hidden until output arrives
             const inputBar = document.createElement('div');
             inputBar.className = 'terminal-interactive-bar';
             inputBar.id = 'terminalInteractiveBar';
+            inputBar.style.display = 'none';
             inputBar.innerHTML = `
                 <span class="term-prompt-caret">❯</span>
-                <input type="text" id="termInteractiveInput" class="term-cli-input" placeholder="Type input here and press Enter..." autofocus autocomplete="off" spellcheck="false">
+                <input type="text" id="termInteractiveInput" class="term-cli-input" placeholder="Send input..." autocomplete="off" spellcheck="false">
                 <button type="button" id="btnTermSendInput" class="term-send-btn" title="Send input (Enter)">↵</button>
             `;
             consoleBody.appendChild(inputBar);
+            let inputBarShown = false;
+            const showInputBar = () => {
+                if (!inputBarShown) {
+                    inputBarShown = true;
+                    inputBar.style.display = '';
+                    if (termInput) termInput.focus();
+                }
+            };
+            // Show input bar after a short delay so program output renders first
+            setTimeout(showInputBar, 350);
 
             const termInput = inputBar.querySelector('#termInteractiveInput');
             const termBtn = inputBar.querySelector('#btnTermSendInput');
@@ -1413,7 +1424,7 @@ int main() {
                 submitTerminalInput();
             });
 
-            setTimeout(() => { if (termInput) termInput.focus(); }, 50);
+            // Focus handled by showInputBar()
 
             // Polling loop
             let accumulatedOut = '';
@@ -1447,6 +1458,7 @@ int main() {
                         chunkSpan.textContent = pollData.stdout;
                         outStream.appendChild(chunkSpan);
                         consoleBody.scrollTop = consoleBody.scrollHeight;
+                        showInputBar(); // Reveal input bar once we have output
                     }
                     if (pollData.stderr) {
                         accumulatedErr += pollData.stderr;
