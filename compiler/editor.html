@@ -127,10 +127,45 @@
 
             <!-- Right Controls -->
             <div class="topbar-right">
-                <!-- Sound Effects Toggle -->
-                <button class="arcade-btn btn-icon-round" id="btnSound" title="Toggle Sound Effects" aria-label="Toggle Sound Effects">
-                    <i class="fa-solid fa-volume-high" id="soundIcon"></i>
-                </button>
+                <!-- Sound Effects & Audio Theme Menu -->
+                <div class="arcade-dropdown-wrapper" id="soundDropdownWrapper">
+                    <button class="arcade-btn btn-icon-round" id="btnSound" title="Audio Theme & Sound Effects" aria-label="Audio Theme & Sound Effects">
+                        <i class="fa-solid fa-volume-high" id="soundIcon"></i>
+                    </button>
+                    <div class="arcade-dropdown-menu dropdown-right" id="soundDropdownMenu">
+                        <div class="dropdown-header">01 // AUDIO THEME</div>
+                        <div class="dropdown-item active" data-sound-theme="arcade">
+                            <span class="theme-icon">🕹️</span>
+                            <span>8-Bit Arcade</span>
+                            <span class="item-badge">RETRO</span>
+                        </div>
+                        <div class="dropdown-item" data-sound-theme="nintendo">
+                            <span class="theme-icon">🍄</span>
+                            <span>Nintendo NES</span>
+                            <span class="item-badge">80s</span>
+                        </div>
+                        <div class="dropdown-item" data-sound-theme="cyberpunk">
+                            <span class="theme-icon">⚡</span>
+                            <span>Cyberpunk Synth</span>
+                            <span class="item-badge">NEON</span>
+                        </div>
+                        <div class="dropdown-item" data-sound-theme="mechanical">
+                            <span class="theme-icon">⌨️</span>
+                            <span>Mechanical THOCK</span>
+                            <span class="item-badge">KEYS</span>
+                        </div>
+                        <div class="dropdown-item" data-sound-theme="minimal">
+                            <span class="theme-icon">🫧</span>
+                            <span>Modern Zen</span>
+                            <span class="item-badge">CLEAN</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item" id="soundToggleMuteItem">
+                            <span class="theme-icon" id="soundToggleMuteIcon">🔊</span>
+                            <span id="soundToggleMuteLabel">Mute Sound Effects</span>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Theme Toggle -->
                 <div class="arcade-dropdown-wrapper" id="themeDropdownWrapper">
@@ -441,6 +476,19 @@
                         <input type="checkbox" id="settingSound" checked aria-label="8-Bit Sound Effects">
                         <span class="retro-slider"></span>
                     </label>
+                </div>
+                <div class="setting-item">
+                    <div>
+                        <strong>Audio Theme Profile</strong>
+                        <p>Sound pack for clicks, run & output</p>
+                    </div>
+                    <select id="settingSoundTheme" class="retro-select" aria-label="Audio Theme Profile">
+                        <option value="arcade" selected>🕹️ 8-Bit Arcade (Retro)</option>
+                        <option value="nintendo">🍄 Nintendo NES (80s Chiptune)</option>
+                        <option value="cyberpunk">⚡ Cyberpunk Synth (Neon)</option>
+                        <option value="mechanical">⌨️ Mechanical THOCK (Key Switches)</option>
+                        <option value="minimal">🫧 Modern Zen (Clean Pop)</option>
+                    </select>
                 </div>
                 <div class="setting-item">
                     <div>

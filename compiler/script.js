@@ -173,6 +173,12 @@ int main() {
     let tabs = [];
     let isExecuting = false;
     let soundEnabled = localStorage.getItem('codedex_sound') !== 'false';
+    let currentSoundTheme = localStorage.getItem('codedex_sound_theme') || 'arcade';
+    const validSoundThemes = ['arcade', 'nintendo', 'cyberpunk', 'mechanical', 'minimal'];
+    if (!validSoundThemes.includes(currentSoundTheme)) {
+        currentSoundTheme = 'arcade';
+        localStorage.setItem('codedex_sound_theme', 'arcade');
+    }
 
     // DOM Elements
     const langDropdownBtn = document.getElementById('langDropdownBtn');
@@ -184,6 +190,11 @@ int main() {
     const btnFormat = document.getElementById('btnFormat');
     const btnSound = document.getElementById('btnSound');
     const soundIcon = document.getElementById('soundIcon');
+    const soundDropdownWrapper = document.getElementById('soundDropdownWrapper');
+    const soundDropdownMenu = document.getElementById('soundDropdownMenu');
+    const soundToggleMuteItem = document.getElementById('soundToggleMuteItem');
+    const soundToggleMuteIcon = document.getElementById('soundToggleMuteIcon');
+    const soundToggleMuteLabel = document.getElementById('soundToggleMuteLabel');
     const btnTheme = document.getElementById('btnTheme');
     const themeDropdownWrapper = document.getElementById('themeDropdownWrapper');
     const btnDownload = document.getElementById('btnDownload');
@@ -245,7 +256,7 @@ int main() {
         activeOscillators.clear();
     }
 
-    function playTone(freq, type, duration, delay = 0) {
+    function playTone(freq, type, duration, delay = 0, volume = 0.08, endFreq = null) {
         if (!soundEnabled) return;
         setTimeout(() => {
             if (!soundEnabled) return;
@@ -254,16 +265,20 @@ int main() {
 
             try {
                 const now = ctx.currentTime;
-                const safeDuration = Math.max(duration, 0.04);
+                const safeDuration = Math.max(duration, 0.03);
                 const stopTime = now + safeDuration;
 
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
 
                 osc.type = type;
-                osc.frequency.setValueAtTime(freq, now);
+                const startF = Math.max(20, freq);
+                osc.frequency.setValueAtTime(startF, now);
+                if (endFreq && endFreq > 20) {
+                    osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), stopTime);
+                }
 
-                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.setValueAtTime(volume, now);
                 gain.gain.linearRampToValueAtTime(0.0001, stopTime);
 
                 osc.connect(gain);
@@ -299,39 +314,184 @@ int main() {
         const ctx = getAudioContext();
         if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
 
-        if (name === 'click') {
-            playTone(800, 'square', 0.05);
-        } else if (name === 'run') {
-            playTone(440, 'triangle', 0.08);
-            playTone(660, 'triangle', 0.08, 60);
-        } else if (name === 'success') {
-            // Ascending coin arpeggio
-            playTone(523.25, 'square', 0.08); // C5
-            playTone(659.25, 'square', 0.08, 70); // E5
-            playTone(783.99, 'square', 0.08, 140); // G5
-            playTone(1046.50, 'square', 0.16, 210); // C6
-        } else if (name === 'error') {
-            playTone(220, 'sawtooth', 0.12);
-            playTone(180, 'sawtooth', 0.18, 90);
-        } else if (name === 'quack') {
-            playTone(600, 'triangle', 0.06);
-            playTone(750, 'triangle', 0.09, 40);
-            playTone(500, 'triangle', 0.12, 100);
+        const theme = currentSoundTheme || 'arcade';
+
+        if (theme === 'nintendo') {
+            if (name === 'click') {
+                playTone(987.77, 'square', 0.04, 0, 0.06);
+            } else if (name === 'run') {
+                playTone(659.25, 'square', 0.05, 0, 0.06);
+                playTone(783.99, 'square', 0.05, 45, 0.06);
+                playTone(1318.51, 'square', 0.05, 90, 0.06);
+                playTone(1046.50, 'square', 0.05, 135, 0.06);
+                playTone(1174.66, 'square', 0.05, 180, 0.06);
+                playTone(1567.98, 'square', 0.12, 225, 0.07);
+            } else if (name === 'success') {
+                playTone(987.77, 'square', 0.06, 0, 0.07);
+                playTone(1318.51, 'square', 0.22, 60, 0.08);
+            } else if (name === 'error') {
+                playTone(293.66, 'square', 0.08, 0, 0.07);
+                playTone(261.63, 'square', 0.08, 60, 0.07);
+                playTone(220.00, 'square', 0.08, 120, 0.07);
+                playTone(174.61, 'square', 0.16, 180, 0.08);
+            } else if (name === 'quack') {
+                playTone(783.99, 'square', 0.05, 0, 0.06);
+                playTone(1046.50, 'square', 0.06, 40, 0.06);
+                playTone(880.00, 'square', 0.08, 90, 0.06);
+            }
+        } else if (theme === 'cyberpunk') {
+            if (name === 'click') {
+                playTone(1400, 'sawtooth', 0.04, 0, 0.06, 350);
+            } else if (name === 'run') {
+                playTone(150, 'sawtooth', 0.18, 0, 0.07, 880);
+                playTone(75, 'sine', 0.22, 0, 0.10, 440);
+            } else if (name === 'success') {
+                playTone(293.66, 'sawtooth', 0.25, 0, 0.04);
+                playTone(369.99, 'sawtooth', 0.25, 30, 0.04);
+                playTone(440.00, 'sawtooth', 0.28, 60, 0.05);
+                playTone(587.33, 'sawtooth', 0.35, 90, 0.05);
+            } else if (name === 'error') {
+                playTone(420, 'sawtooth', 0.08, 0, 0.08, 70);
+                playTone(210, 'square', 0.12, 40, 0.08, 50);
+            } else if (name === 'quack') {
+                playTone(900, 'sawtooth', 0.06, 0, 0.06, 400);
+                playTone(1200, 'sawtooth', 0.08, 50, 0.06, 300);
+            }
+        } else if (theme === 'mechanical') {
+            if (name === 'click') {
+                playTone(1800, 'sine', 0.015, 0, 0.05);
+                playTone(140, 'triangle', 0.04, 0, 0.09, 80);
+            } else if (name === 'run') {
+                playTone(160, 'triangle', 0.03, 0, 0.08, 90);
+                playTone(180, 'triangle', 0.03, 40, 0.08, 100);
+                playTone(130, 'triangle', 0.04, 80, 0.09, 70);
+            } else if (name === 'success') {
+                playTone(2093, 'sine', 0.35, 0, 0.10);
+                playTone(3135, 'sine', 0.18, 0, 0.04);
+                playTone(120, 'triangle', 0.06, 40, 0.06, 70);
+            } else if (name === 'error') {
+                playTone(110, 'triangle', 0.08, 0, 0.10, 60);
+                playTone(85, 'sawtooth', 0.10, 50, 0.07, 50);
+            } else if (name === 'quack') {
+                playTone(320, 'sine', 0.06, 0, 0.08, 200);
+                playTone(240, 'sine', 0.08, 50, 0.08, 160);
+            }
+        } else if (theme === 'minimal') {
+            if (name === 'click') {
+                playTone(1150, 'sine', 0.025, 0, 0.06, 650);
+            } else if (name === 'run') {
+                playTone(440, 'sine', 0.06, 0, 0.07);
+                playTone(659.25, 'sine', 0.08, 50, 0.07);
+            } else if (name === 'success') {
+                playTone(659.25, 'sine', 0.20, 0, 0.06);
+                playTone(880.00, 'sine', 0.22, 50, 0.06);
+                playTone(1108.73, 'sine', 0.28, 100, 0.07);
+            } else if (name === 'error') {
+                playTone(220, 'sine', 0.08, 0, 0.06, 140);
+                playTone(165, 'sine', 0.12, 50, 0.06, 110);
+            } else if (name === 'quack') {
+                playTone(587.33, 'sine', 0.10, 0, 0.06);
+                playTone(783.99, 'sine', 0.12, 60, 0.06);
+            }
+        } else {
+            // Default: 'arcade' (Classic 8-Bit)
+            if (name === 'click') {
+                playTone(800, 'square', 0.05, 0, 0.07);
+            } else if (name === 'run') {
+                playTone(440, 'triangle', 0.08, 0, 0.08);
+                playTone(660, 'triangle', 0.08, 60, 0.08);
+            } else if (name === 'success') {
+                playTone(523.25, 'square', 0.08, 0, 0.08);
+                playTone(659.25, 'square', 0.08, 70, 0.08);
+                playTone(783.99, 'square', 0.08, 140, 0.08);
+                playTone(1046.50, 'square', 0.16, 210, 0.09);
+            } else if (name === 'error') {
+                playTone(220, 'sawtooth', 0.12, 0, 0.08);
+                playTone(180, 'sawtooth', 0.18, 90, 0.08);
+            } else if (name === 'quack') {
+                playTone(600, 'triangle', 0.06, 0, 0.08);
+                playTone(750, 'triangle', 0.09, 40, 0.08);
+                playTone(500, 'triangle', 0.12, 100, 0.08);
+            }
         }
     }
 
-    btnSound.addEventListener('click', () => {
-        soundEnabled = !soundEnabled;
-        localStorage.setItem('codedex_sound', soundEnabled);
+    function updateSoundThemeDisplay(theme) {
+        currentSoundTheme = theme;
+        localStorage.setItem('codedex_sound_theme', theme);
+        document.querySelectorAll('#soundDropdownMenu .dropdown-item[data-sound-theme]').forEach(item => {
+            item.classList.toggle('active', item.getAttribute('data-sound-theme') === theme);
+        });
+        const soundThemeSelect = document.getElementById('settingSoundTheme');
+        if (soundThemeSelect) soundThemeSelect.value = theme;
+    }
+
+    function updateSoundMuteUI() {
         soundIcon.className = soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
-        showToast(soundEnabled ? '8-bit Audio Enabled 🔊' : 'Audio Muted 🔇');
-        if (!soundEnabled) {
-            stopAllSounds();
-        } else {
-            playSound('success');
+        if (btnSound) {
+            btnSound.classList.toggle('sound-muted', !soundEnabled);
         }
+        if (soundToggleMuteIcon && soundToggleMuteLabel) {
+            soundToggleMuteIcon.textContent = soundEnabled ? '🔇' : '🔊';
+            soundToggleMuteLabel.textContent = soundEnabled ? 'Mute Sound Effects' : 'Unmute Sound Effects';
+        }
+        const settingSoundEl = document.getElementById('settingSound');
+        if (settingSoundEl) settingSoundEl.checked = soundEnabled;
+    }
+
+    // Sound Dropdown Toggle & Items
+    if (btnSound && soundDropdownWrapper) {
+        btnSound.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundDropdownWrapper.classList.toggle('open');
+            langDropdownWrapper?.classList.remove('open');
+            themeDropdownWrapper?.classList.remove('open');
+            if (typeof authUserDropdown !== 'undefined' && authUserDropdown) authUserDropdown.classList.remove('open');
+            playSound('click');
+        });
+    }
+
+    document.querySelectorAll('#soundDropdownMenu .dropdown-item[data-sound-theme]').forEach(item => {
+        item.addEventListener('click', () => {
+            const theme = item.getAttribute('data-sound-theme');
+            if (!soundEnabled) {
+                soundEnabled = true;
+                localStorage.setItem('codedex_sound', 'true');
+                updateSoundMuteUI();
+            }
+            updateSoundThemeDisplay(theme);
+            soundDropdownWrapper?.classList.remove('open');
+            playSound('success');
+            const soundNames = {
+                arcade: '8-Bit Arcade 🕹️',
+                nintendo: 'Nintendo NES 🍄',
+                cyberpunk: 'Cyberpunk Synth ⚡',
+                mechanical: 'Mechanical THOCK ⌨️',
+                minimal: 'Modern Zen 🫧'
+            };
+            showToast(`Audio Theme: ${soundNames[theme] || theme}`);
+        });
     });
-    soundIcon.className = soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+
+    if (soundToggleMuteItem) {
+        soundToggleMuteItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundEnabled = !soundEnabled;
+            localStorage.setItem('codedex_sound', soundEnabled);
+            updateSoundMuteUI();
+            soundDropdownWrapper?.classList.remove('open');
+            if (!soundEnabled) {
+                stopAllSounds();
+                showToast('Audio Muted 🔇');
+            } else {
+                showToast('Audio Enabled 🔊');
+                playSound('click');
+            }
+        });
+    }
+
+    updateSoundThemeDisplay(currentSoundTheme);
+    updateSoundMuteUI();
 
     // Gamification XP removed per user request
     function addXp(amount) {}
@@ -954,6 +1114,8 @@ int main() {
         e.stopPropagation();
         langDropdownWrapper.classList.toggle('open');
         themeDropdownWrapper.classList.remove('open');
+        if (soundDropdownWrapper) soundDropdownWrapper.classList.remove('open');
+        if (typeof authUserDropdown !== 'undefined' && authUserDropdown) authUserDropdown.classList.remove('open');
         playSound('click');
     });
 
@@ -970,6 +1132,8 @@ int main() {
         e.stopPropagation();
         themeDropdownWrapper.classList.toggle('open');
         langDropdownWrapper.classList.remove('open');
+        if (soundDropdownWrapper) soundDropdownWrapper.classList.remove('open');
+        if (typeof authUserDropdown !== 'undefined' && authUserDropdown) authUserDropdown.classList.remove('open');
         playSound('click');
     });
 
@@ -985,6 +1149,8 @@ int main() {
     document.addEventListener('click', () => {
         langDropdownWrapper.classList.remove('open');
         themeDropdownWrapper.classList.remove('open');
+        if (soundDropdownWrapper) soundDropdownWrapper.classList.remove('open');
+        if (typeof authUserDropdown !== 'undefined' && authUserDropdown) authUserDropdown.classList.remove('open');
     });
 
     function applyTheme(theme) {
@@ -2978,12 +3144,43 @@ int main() {
         if (editor) editor.updateOptions({ fontSize: size });
     });
 
-    settingSound.checked = soundEnabled;
-    settingSound.addEventListener('change', () => {
-        soundEnabled = settingSound.checked;
-        localStorage.setItem('codedex_sound', soundEnabled);
-        soundIcon.className = soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
-    });
+    if (settingSound) {
+        settingSound.checked = soundEnabled;
+        settingSound.addEventListener('change', () => {
+            soundEnabled = settingSound.checked;
+            localStorage.setItem('codedex_sound', soundEnabled);
+            updateSoundMuteUI();
+            if (!soundEnabled) {
+                stopAllSounds();
+                showToast('Audio Muted 🔇');
+            } else {
+                showToast('Audio Enabled 🔊');
+                playSound('click');
+            }
+        });
+    }
+
+    const settingSoundTheme = document.getElementById('settingSoundTheme');
+    if (settingSoundTheme) {
+        settingSoundTheme.value = currentSoundTheme;
+        settingSoundTheme.addEventListener('change', () => {
+            if (!soundEnabled) {
+                soundEnabled = true;
+                localStorage.setItem('codedex_sound', 'true');
+                updateSoundMuteUI();
+            }
+            updateSoundThemeDisplay(settingSoundTheme.value);
+            playSound('success');
+            const soundNames = {
+                arcade: '8-Bit Arcade 🕹️',
+                nintendo: 'Nintendo NES 🍄',
+                cyberpunk: 'Cyberpunk Synth ⚡',
+                mechanical: 'Mechanical THOCK ⌨️',
+                minimal: 'Modern Zen 🫧'
+            };
+            showToast(`Audio Theme: ${soundNames[settingSoundTheme.value] || settingSoundTheme.value}`);
+        });
+    }
 
     settingMinimap.checked = localStorage.getItem('codedex_minimap') !== 'false';
     settingMinimap.addEventListener('change', () => {
