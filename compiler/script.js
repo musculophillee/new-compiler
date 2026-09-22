@@ -2,9 +2,15 @@
  * CODÉDEX ADVENTURE COMPILER — CLIENT ENGINE
  * Monaco Editor + 8-Bit Web Audio + Gamified XP + Duck Wizard AI
  */
-
 document.addEventListener('DOMContentLoaded', () => {
-    const DEFAULT_GEMINI_KEY = atob('QVEuQWI4Uk42SWxLaDRrZVE0ZmdkYzQzNnFGc3NXSmxVbndFNlBLSW5Wa0Z5NjQ0cHhlMkE=');
+    const DEFAULT_GEMINI_KEY = '';
+    try {
+        const cachedKey = localStorage.getItem('codedex_ai_key') || localStorage.getItem('codedex_gemini_key') || '';
+        if (cachedKey && !cachedKey.startsWith('AIza')) {
+            localStorage.removeItem('codedex_ai_key');
+            localStorage.removeItem('codedex_gemini_key');
+        }
+    } catch (e) {}
 
     // ===== Language Configuration & Quest Scrolls =====
     const LANGUAGES = {
@@ -1574,15 +1580,11 @@ int main() {
         const btnAutoFixQuick = crashBanner.querySelector('#btnAutoFixQuick');
 
         btnWhyCrash.addEventListener('click', () => {
-            requireAuth(() => {
-                diagnoseCrashAndFix(stderrText || consoleBody.textContent, crashBanner, false);
-            });
+            diagnoseCrashAndFix(stderrText || (consoleBody ? consoleBody.textContent : ''), crashBanner, false);
         });
 
         btnAutoFixQuick.addEventListener('click', () => {
-            requireAuth(() => {
-                diagnoseCrashAndFix(stderrText || consoleBody.textContent, crashBanner, true);
-            });
+            diagnoseCrashAndFix(stderrText || (consoleBody ? consoleBody.textContent : ''), crashBanner, true);
         });
     }
 
@@ -1655,6 +1657,11 @@ int main() {
         let btnAutoFixQuick = null;
         let crashDiagContainer = null;
 
+        if (!crashCard && consoleBody) {
+            const existingBanner = consoleBody.querySelector('.crash-diagnostic-banner');
+            if (existingBanner) crashCard = existingBanner;
+        }
+
         if (crashCard) {
             btnWhyCrash = crashCard.querySelector('#btnWhyCrash');
             btnAutoFixQuick = crashCard.querySelector('#btnAutoFixQuick');
@@ -1672,6 +1679,14 @@ int main() {
 
         try {
             const aiApiKey = (localStorage.getItem('codedex_ai_key') || localStorage.getItem('codedex_gemini_key') || DEFAULT_GEMINI_KEY).trim();
+            
+            // Clean up errorText: if it's UI intro text or not a compiler error, send empty string so backend compiles fresh!
+            let cleanError = (errorText || '').trim();
+            const hasRealError = /(?:error:|traceback|syntaxerror|exception|failed|undefined|fatal|compilation error)/i.test(cleanError);
+            if (!hasRealError) {
+                cleanError = '';
+            }
+
             const response = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1680,7 +1695,7 @@ int main() {
                     action: 'crash_analysis',
                     language: currentLang,
                     code: editor.getValue(),
-                    error: errorText || consoleBody.textContent,
+                    error: cleanError,
                     apiKey: aiApiKey
                 })
             });
@@ -1694,11 +1709,23 @@ int main() {
                 appendAiMessage('user', 'Why did my code crash?');
                 appendAiMessage('assistant', data.response || data.explanation || 'Code analyzed.', data.fixedCode);
 
-                if (autoApply && data.fixedCode) {
+                const currentEditorVal = editor.getValue();
+                const codeChanged = data.fixedCode && data.fixedCode.trim() !== currentEditorVal.trim();
+
+                if (autoApply && codeChanged) {
                     editor.setValue(data.fixedCode);
                     monaco.editor.setModelMarkers(editor.getModel(), 'compiler', []);
                     playSound('success');
-                    showToast('Fixed code applied to editor! ✨');
+                    showToast('1-Click Auto-Fix applied to editor! ✨');
+                } else if (autoApply && data.alreadyValid) {
+                    playSound('success');
+                    showToast('Code is already valid — 0 errors found! 🚀');
+                } else if (autoApply && data.fixedCode) {
+                    playSound('success');
+                    showToast('Code verified — syntax is up to date! ✨');
+                } else if (autoApply) {
+                    playSound('quack');
+                    showToast(data.summary || 'Could not auto-repair this pattern. Check AI tab 🤖');
                 }
 
                 if (crashCard && crashDiagContainer) {
@@ -1811,15 +1838,25 @@ int main() {
                 btnWhyCrash.style.pointerEvents = 'auto';
             }
             if (btnAutoFixQuick) btnAutoFixQuick.style.pointerEvents = 'auto';
+        } finally {
+            if (btnAutoFixQuick) btnAutoFixQuick.style.pointerEvents = 'auto';
+            if (btnWhyCrash && !btnWhyCrash.innerHTML.includes('DIAGNOSIS COMPLETE')) {
+                btnWhyCrash.style.pointerEvents = 'auto';
+            }
         }
     }
 
     function renderCrashReportHtml(text) {
         const codeBlocks = [];
         let parsedText = text.replace(/```([a-zA-Z0-9_#+-]*)\n?([\s\S]*?)```/g, (match, lang, blockContent) => {
+            const trimmed = blockContent.trim();
+            const lowerLang = (lang || '').toLowerCase();
+            const isErrorBlock = lowerLang === 'error' || lowerLang === 'stderr' || lowerLang === 'traceback' ||
+                /(?:Traceback \(most recent call last\)|NameError:|SyntaxError:|TypeError:|ValueError:|fatal error:|undefined reference|Compilation Error:)/i.test(trimmed);
+
             const idx = codeBlocks.length;
-            codeBlocks.push({ lang: lang || currentLang, code: blockContent.trim() });
-            return `__CODE_BLOCK_${idx}__`;
+            codeBlocks.push({ lang: isErrorBlock ? 'error' : (lang || currentLang), code: trimmed, isError: isErrorBlock });
+            return `__BLOCK_${idx}__`;
         });
 
         let formatted = escapeHtml(parsedText)
@@ -1831,37 +1868,60 @@ int main() {
             .replace(/\n/g, '<br>');
 
         codeBlocks.forEach((cb, idx) => {
-            const blockHtml = `
-                <div class="chat-code-card">
-                    <div class="chat-code-header">
-                        <span class="chat-code-lang">${escapeHtml(cb.lang)}</span>
-                        <div class="chat-code-actions">
-                            <button class="chat-code-btn copy-snippet-btn" data-code-idx="${idx}"><i class="fa-regular fa-copy"></i> Copy</button>
-                            <button class="chat-code-btn apply-snippet-btn" data-code-idx="${idx}"><i class="fa-solid fa-code"></i> Apply to Editor</button>
+            if (cb.isError) {
+                const errorHtml = `
+                    <div class="diag-error-terminal">
+                        <div class="diag-error-term-header">
+                            <span class="diag-error-term-dot"></span>
+                            <span class="diag-error-term-title"><i class="fa-solid fa-triangle-exclamation"></i> COMPILER ERROR TRACE</span>
                         </div>
+                        <pre class="diag-error-term-body"><code>${escapeHtml(cb.code)}</code></pre>
                     </div>
-                    <pre class="chat-code-body"><code>${escapeHtml(cb.code)}</code></pre>
-                </div>
-            `;
-            formatted = formatted.replace(`__CODE_BLOCK_${idx}__`, blockHtml);
+                `;
+                formatted = formatted.replace(`__BLOCK_${idx}__`, errorHtml);
+            } else {
+                const blockHtml = `
+                    <div class="chat-code-card">
+                        <div class="chat-code-header">
+                            <span class="chat-code-lang">${escapeHtml(cb.lang)}</span>
+                            <div class="chat-code-actions">
+                                <button class="chat-code-btn copy-snippet-btn" data-code-idx="${idx}"><i class="fa-regular fa-copy"></i> Copy</button>
+                                <button class="chat-code-btn apply-snippet-btn" data-code-idx="${idx}"><i class="fa-solid fa-code"></i> Apply to Editor</button>
+                            </div>
+                        </div>
+                        <pre class="chat-code-body"><code>${escapeHtml(cb.code)}</code></pre>
+                    </div>
+                `;
+                formatted = formatted.replace(`__BLOCK_${idx}__`, blockHtml);
+            }
         });
 
         return { html: formatted, codeBlocks };
     }
 
-    // Attach Top & Tab Fix Buttons with Auth Protection
+    // Attach Top & Tab Fix Buttons (Direct 1-Click Auto-Fix)
     const btnFixTop = document.getElementById('btnFixTop');
-    if (btnFixTop) btnFixTop.addEventListener('click', () => requireAuth(() => diagnoseCrashAndFix(consoleBody.textContent, null, true)));
+    if (btnFixTop) {
+        btnFixTop.addEventListener('click', () => {
+            const errEl = consoleBody ? consoleBody.querySelector('.out-error') : null;
+            const cleanErr = errEl ? errEl.textContent.trim() : '';
+            diagnoseCrashAndFix(cleanErr, null, true);
+        });
+    }
 
     const btnFixTab = document.getElementById('btnFixTab');
-    if (btnFixTab) btnFixTab.addEventListener('click', () => requireAuth(() => diagnoseCrashAndFix(consoleBody.textContent, null, true)));
+    if (btnFixTab) {
+        btnFixTab.addEventListener('click', () => {
+            const errEl = consoleBody ? consoleBody.querySelector('.out-error') : null;
+            const cleanErr = errEl ? errEl.textContent.trim() : '';
+            diagnoseCrashAndFix(cleanErr, null, true);
+        });
+    }
 
     if (btnAiQuick) {
         btnAiQuick.addEventListener('click', () => {
-            requireAuth(() => {
-                const aiTab = document.querySelector('.qtab[data-pane="ai"]');
-                if (aiTab) aiTab.click();
-            });
+            const aiTab = document.querySelector('.qtab[data-pane="ai"]');
+            if (aiTab) aiTab.click();
         });
     }
 
@@ -1968,6 +2028,8 @@ int main() {
 
         try {
             const aiApiKey = (localStorage.getItem('codedex_ai_key') || localStorage.getItem('codedex_gemini_key') || DEFAULT_GEMINI_KEY).trim();
+            const errEl = consoleBody ? consoleBody.querySelector('.out-error') : null;
+            const cleanErr = errEl ? errEl.textContent.trim() : '';
             const response = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1976,7 +2038,7 @@ int main() {
                     language: currentLang,
                     code: editor.getValue(),
                     prompt: prompt,
-                    error: consoleBody.textContent.includes('Error') ? consoleBody.textContent : '',
+                    error: cleanErr,
                     apiKey: aiApiKey
                 })
             });
@@ -2017,14 +2079,20 @@ int main() {
 
         // Extract code blocks ```lang ... ```
         const codeBlocks = [];
-        let parsedText = text.replace(/```([a-zA-Z0-9_-]*)\n?([\s\S]*?)```/g, (match, lang, blockContent) => {
+        let parsedText = text.replace(/```([a-zA-Z0-9_#+-]*)\n?([\s\S]*?)```/g, (match, lang, blockContent) => {
+            const trimmed = blockContent.trim();
+            const lowerLang = (lang || '').toLowerCase();
+            const isErrorBlock = lowerLang === 'error' || lowerLang === 'stderr' || lowerLang === 'traceback' ||
+                /(?:Traceback \(most recent call last\)|NameError:|SyntaxError:|TypeError:|ValueError:|fatal error:|undefined reference|Compilation Error:)/i.test(trimmed);
+
             const idx = codeBlocks.length;
-            codeBlocks.push({ lang: lang || currentLang, code: blockContent.trim() });
-            return `__CODE_BLOCK_${idx}__`;
+            codeBlocks.push({ lang: isErrorBlock ? 'error' : (lang || currentLang), code: trimmed, isError: isErrorBlock });
+            return `__BLOCK_${idx}__`;
         });
 
-        if (!fixedCode && codeBlocks.length > 0) {
-            fixedCode = codeBlocks[0].code;
+        if (!fixedCode) {
+            const validCb = codeBlocks.find(cb => !cb.isError);
+            if (validCb) fixedCode = validCb.code;
         }
 
         let formatted = escapeHtml(parsedText)
@@ -2033,19 +2101,32 @@ int main() {
             .replace(/\n/g, '<br>');
 
         codeBlocks.forEach((cb, idx) => {
-            const blockHtml = `
-                <div class="chat-code-card">
-                    <div class="chat-code-header">
-                        <span class="chat-code-lang">${escapeHtml(cb.lang)}</span>
-                        <div class="chat-code-actions">
-                            <button class="chat-code-btn copy-snippet-btn" data-code-idx="${idx}"><i class="fa-regular fa-copy"></i> Copy</button>
-                            <button class="chat-code-btn apply-snippet-btn" data-code-idx="${idx}"><i class="fa-solid fa-code"></i> Apply to Editor</button>
+            if (cb.isError) {
+                const errorHtml = `
+                    <div class="diag-error-terminal">
+                        <div class="diag-error-term-header">
+                            <span class="diag-error-term-dot"></span>
+                            <span class="diag-error-term-title"><i class="fa-solid fa-triangle-exclamation"></i> COMPILER ERROR TRACE</span>
                         </div>
+                        <pre class="diag-error-term-body"><code>${escapeHtml(cb.code)}</code></pre>
                     </div>
-                    <pre class="chat-code-body"><code>${escapeHtml(cb.code)}</code></pre>
-                </div>
-            `;
-            formatted = formatted.replace(`__CODE_BLOCK_${idx}__`, blockHtml);
+                `;
+                formatted = formatted.replace(`__BLOCK_${idx}__`, errorHtml);
+            } else {
+                const blockHtml = `
+                    <div class="chat-code-card">
+                        <div class="chat-code-header">
+                            <span class="chat-code-lang">${escapeHtml(cb.lang)}</span>
+                            <div class="chat-code-actions">
+                                <button class="chat-code-btn copy-snippet-btn" data-code-idx="${idx}"><i class="fa-regular fa-copy"></i> Copy</button>
+                                <button class="chat-code-btn apply-snippet-btn" data-code-idx="${idx}"><i class="fa-solid fa-code"></i> Apply to Editor</button>
+                            </div>
+                        </div>
+                        <pre class="chat-code-body"><code>${escapeHtml(cb.code)}</code></pre>
+                    </div>
+                `;
+                formatted = formatted.replace(`__BLOCK_${idx}__`, blockHtml);
+            }
         });
 
         let actionsHtml = '';
@@ -3205,19 +3286,24 @@ int main() {
     const aiKeyStatusText = document.getElementById('aiKeyStatusText');
 
     function updateGeminiStatusUI() {
-        if (!localStorage.getItem('codedex_ai_key') && !localStorage.getItem('codedex_gemini_key')) {
-            localStorage.setItem('codedex_ai_key', DEFAULT_GEMINI_KEY);
-        }
-        const key = (localStorage.getItem('codedex_ai_key') || localStorage.getItem('codedex_gemini_key') || DEFAULT_GEMINI_KEY).trim();
+        try {
+            const cachedKey = (localStorage.getItem('codedex_ai_key') || localStorage.getItem('codedex_gemini_key') || '').trim();
+            if (cachedKey && !cachedKey.startsWith('AIza')) {
+                localStorage.removeItem('codedex_ai_key');
+                localStorage.removeItem('codedex_gemini_key');
+            }
+        } catch (e) {}
+
+        const key = (localStorage.getItem('codedex_ai_key') || localStorage.getItem('codedex_gemini_key') || '').trim();
         if (settingGeminiKey) settingGeminiKey.value = key;
         if (key) {
             if (aiKeyDot) aiKeyDot.className = 'pulse-dot-ai connected';
             if (aiKeyStatusText) aiKeyStatusText.textContent = '✨ Cloud AI Connected';
             if (btnConfigKeyText) btnConfigKeyText.textContent = 'Manage Key';
         } else {
-            if (aiKeyDot) aiKeyDot.className = 'pulse-dot-ai';
-            if (aiKeyStatusText) aiKeyStatusText.textContent = '⚡ Local AI (Add API Key for Cloud Intelligence)';
-            if (btnConfigKeyText) btnConfigKeyText.textContent = 'Add Key';
+            if (aiKeyDot) aiKeyDot.className = 'pulse-dot-ai connected';
+            if (aiKeyStatusText) aiKeyStatusText.textContent = '⚡ Fast Built-In AI Active (Free & Unlimited)';
+            if (btnConfigKeyText) btnConfigKeyText.textContent = 'Add Custom Key';
         }
     }
 
