@@ -673,6 +673,59 @@ class CodeCraftHandler(http.server.SimpleHTTPRequestHandler):
                 except Exception:
                     pass
 
+            # Fast-path: Check if process completes quickly (non-interactive or stdin provided)
+            fast_start = time.time()
+            while time.time() - fast_start < 0.06:
+                if proc.poll() is not None:
+                    break
+                time.sleep(0.005)
+
+            if proc.poll() is not None:
+                for t in session.get("threads", []):
+                    t.join(timeout=0.2)  # give reader threads time to drain the pipe
+                # Drain any remaining bytes directly from the pipe as a fallback
+                try:
+                    remaining_out = proc.stdout.read()
+                    if remaining_out:
+                        with session["lock"]:
+                            session["stdout_queue"].append(remaining_out.decode("utf-8", errors="replace"))
+                except Exception:
+                    pass
+                try:
+                    remaining_err = proc.stderr.read()
+                    if remaining_err:
+                        with session["lock"]:
+                            session["stderr_queue"].append(remaining_err.decode("utf-8", errors="replace"))
+                except Exception:
+                    pass
+                try:
+                    proc.stdout.close()
+                    proc.stderr.close()
+                except Exception:
+                    pass
+                with session["lock"]:
+                    out_chunk = "".join(session["stdout_queue"])
+                    err_chunk = "".join(session["stderr_queue"])
+                elapsed = round((time.time() - session["start_time"]) * 1000)
+                exit_code = proc.returncode if proc.returncode is not None else 0
+                temp_dir = session.get("temp_dir")
+                if temp_dir and os.path.isdir(temp_dir):
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                with SESSIONS_LOCK:
+                    ACTIVE_SESSIONS.pop(session_id, None)
+
+                self._send_json({
+                    "success": exit_code == 0,
+                    "done": True,
+                    "stdout": out_chunk,
+                    "stderr": err_chunk,
+                    "exitCode": exit_code,
+                    "time": elapsed
+                })
+                log_request("POST", "/api/execute/start", 200)
+                return
+
+
             self._send_json({"success": True, "sessionId": session_id, "status": "running"})
             log_request("POST", "/api/execute/start", 200)
 
