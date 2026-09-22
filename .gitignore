@@ -27,14 +27,24 @@ yarn-error.log*
 *.so
 *.dylib
 temp_code.*
+/tmp/
+temp_*/
+
+# Databases & Secrets
+*.db
+*.sqlite
+*.sqlite3
+compiler/data/
 
 # OS & Editor
 .DS_Store
 Thumbs.db
-.vscode/*
-!.vscode/settings.json
+.vscode/
 .idea/
 
 # Testing & Logs
 *.log
 .pytest_cache/
+
+# Unrelated folders
+portfolio/
